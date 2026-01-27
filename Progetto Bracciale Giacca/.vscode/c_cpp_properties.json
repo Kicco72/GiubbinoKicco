@@ -1,0 +1,80 @@
+{
+    "version": 4,
+    "configurations": [
+        {
+            "name": "windows-gcc-arm64",
+            "compilerPath": "C:/Users/franc/AppData/Local/Arduino15/packages/arduino/tools/arm-none-eabi-gcc/7-2017q4/bin/arm-none-eabi-g++.exe",
+            "compilerArgs": [
+                "-w",
+                "-nostdlib"
+            ],
+            "intelliSenseMode": "windows-gcc-arm64",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\cores\\arduino",
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\variants\\GIGA",
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\cores\\arduino\\api\\deprecated",
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\cores\\arduino\\api\\deprecated-avr-comp"
+            ],
+            "forcedInclude": [
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\cores\\arduino\\Arduino.h"
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "defines": [
+                "ARDUINO=10607",
+                "ARDUINO_GIGA",
+                "ARDUINO_ARCH_MBED_GIGA",
+                "ARDUINO_ARCH_MBED",
+                "ARDUINO_LIBRARY_DISCOVERY_PHASE=0",
+                "CM4_BINARY_START=0x60000000",
+                "CM4_BINARY_END=0x60040000",
+                "CM4_RAM_END=0x60080000",
+                "USBCON"
+            ]
+        },
+        {
+            "name": "Arduino",
+            "compilerPath": "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\tools\\arm-none-eabi-gcc\\7-2017q4\\bin\\arm-none-eabi-g++",
+            "compilerArgs": [
+                "-w",
+                "-nostdlib"
+            ],
+            "intelliSenseMode": "gcc-x64",
+            "includePath": [
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\cores\\arduino",
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\variants\\GIGA",
+                "C:\\Users\\franc\\Documents\\Arduino\\libraries\\Arduino_GigaDisplay_GFX\\src",
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\libraries\\Arduino_H7_Video\\src",
+                "C:\\Users\\franc\\Documents\\Arduino\\libraries\\Adafruit_GFX_Library",
+                "C:\\Users\\franc\\Documents\\Arduino\\libraries\\Adafruit_BusIO",
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\libraries\\Wire",
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\libraries\\SPI",
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\libraries\\Portenta_SDRAM\\src",
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\libraries\\ea_malloc",
+                "C:\\Users\\franc\\Documents\\Arduino\\libraries\\Arduino_GigaDisplayTouch\\src",
+                "C:\\Users\\franc\\Documents\\Arduino\\libraries\\lvgl\\src",
+                "C:\\Users\\franc\\Documents\\Arduino\\libraries\\ArduinoBLE\\src",
+                "C:\\Users\\franc\\Documents\\Arduino\\libraries\\Arduino_BMI270_BMM150\\src",
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\cores\\arduino\\api\\deprecated",
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\cores\\arduino\\api\\deprecated-avr-comp"
+            ],
+            "forcedInclude": [
+                "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\mbed_giga\\4.4.1\\cores\\arduino\\Arduino.h"
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "defines": [
+                "ARDUINO=10607",
+                "ARDUINO_GIGA",
+                "ARDUINO_ARCH_MBED_GIGA",
+                "ARDUINO_ARCH_MBED",
+                "ARDUINO_LIBRARY_DISCOVERY_PHASE=0",
+                "CM4_BINARY_START=0x60000000",
+                "CM4_BINARY_END=0x60040000",
+                "CM4_RAM_END=0x60080000",
+                "USBCON"
+            ]
+        }
+    ]
+}

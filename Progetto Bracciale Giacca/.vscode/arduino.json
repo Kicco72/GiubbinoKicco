@@ -1,0 +1,6 @@
+{
+    "configuration": "target_core=cm7,split=100_0,security=none",
+    "board": "arduino:mbed_giga:giga",
+    "port": "COM7",
+    "sketch": "B_G_Master\\B_G_Master.ino"
+}

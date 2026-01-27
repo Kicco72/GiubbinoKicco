@@ -1,7 +1,10 @@
 /*
   NANO 33 IoT - PERIPHERAL
   Attuatore su PIN 4
+  Progetto di kicco972.net
 */
+
+#include <Arduino.h>
 #include <ArduinoBLE.h>
 
 const int ledPin = 4; // Pin da controllare
@@ -12,8 +15,8 @@ BLEService actuatorService("19B10000-E8F2-537E-4F6C-D104768A1214");
 // Caratteristica (Read, Write, Notify)
 BLEByteCharacteristic switchChar("19B10001-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite | BLENotify);
 
-void setup()
-{
+void setup(){
+    
     Serial.begin(9600);
     pinMode(ledPin, OUTPUT);
     digitalWrite(ledPin, LOW);
@@ -36,8 +39,8 @@ void setup()
     Serial.println("Nano IoT in attesa di connessione...");
 }
 
-void loop()
-{
+void loop(){
+
     BLEDevice central = BLE.central();
 
     if (central)

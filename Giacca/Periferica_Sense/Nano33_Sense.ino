@@ -3,9 +3,10 @@
 /*
   NANO 33 BLE SENSE - PERIPHERAL
   Trasmette Temperatura e Umidità
+  Progetto di kicco972.net
 */
+
 #include <ArduinoBLE.h>
-// #include <Arduino_HTS221.h> // Usa Arduino_HS300x se hai la Rev2
 #include <Arduino_HS300x.h>
 
 // Definizione Servizio (Environmental Sensing)
@@ -17,8 +18,8 @@ BLEFloatCharacteristic humChar("2A6F", BLERead | BLENotify);
 
 long previousMillis = 0;
 
-void setup()
-{
+void setup(){
+
     Serial.begin(9600);
 
     if (!HS300x.begin())
@@ -47,8 +48,8 @@ void setup()
     Serial.println("Nano Sense in attesa di connessione...");
 }
 
-void loop()
-{
+void loop(){
+    
     BLEDevice central = BLE.central();
 
     if (central)
