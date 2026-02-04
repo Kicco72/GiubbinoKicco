@@ -26,15 +26,32 @@ void BleNetwork::begin()
         while (1)
             ;
     }
-    Serial.println("BLE Network Avviata. Scansione...");
-    BLE.scan();
+    Serial.println("BLE Network Avviata.");
+    // La scansione non parte più in automatico
+}
+
+void BleNetwork::startScan() {
+    if (!BLE.isScanning()) {
+        Serial.println("Avvio scansione manuale...");
+        BLE.scan(true); // Scan in modo continuo
+    }
+}
+
+void BleNetwork::stopScan() {
+    if (BLE.isScanning()) {
+        BLE.stopScan();
+        Serial.println("Scansione interrotta.");
+    }
+}
+
+bool BleNetwork::isScanning() {
+    return BLE.isScanning();
 }
 
 void BleNetwork::update()
 {
-    // Se manca qualcuno, prova a connetterti
-    if (!_senseConnected || !_iotConnected)
-    {
+    // Se stiamo scansionando, cerchiamo le periferiche
+    if (BLE.isScanning()) {
         scanAndConnect();
     }
 
@@ -45,7 +62,7 @@ void BleNetwork::update()
         {
             Serial.println("Sense perso!");
             _senseConnected = false;
-            BLE.scan(); // Riavvia scansione
+            // Non riavviamo più la scansione in automatico
         }
         else
         {
@@ -60,7 +77,7 @@ void BleNetwork::update()
         {
             Serial.println("IoT perso!");
             _iotConnected = false;
-            BLE.scan(); // Riavvia scansione
+            // Non riavviamo più la scansione in automatico
         }
         // Nota: La scrittura su IoT avviene su richiesta (toggleActuator), non in polling
     }

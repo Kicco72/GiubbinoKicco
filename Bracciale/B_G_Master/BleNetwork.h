@@ -15,6 +15,11 @@ class BleNetwork {
 
     // Inizializzazione
     void begin();
+    
+    // Funzioni per il controllo manuale della scansione
+    void startScan();
+    void stopScan();
+    bool isScanning();
 
     // Da chiamare nel loop() continuamente
     void update();

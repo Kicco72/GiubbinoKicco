@@ -1,103 +1,60 @@
+// Progetto Bracciale Giubbino
+// di Kicco972, 2025
 
-// Includi librerie e files di intestazione necessari
+// Includi i moduli del progetto
+#include "Display.h"
+#include "BleNetwork.h"
 
-//#include "Comunicazione.h"
-#include "Ble.h"
-#include "Imu3DVisualizer.h"
-#include <Arduino_GigaDisplay_GFX.h>
-#include "Arduino_GigaDisplayTouch.h"
-#include "Arduino_H7_Video.h"
-#include "lvgl.h"
-
-
-// Dichiarazioni globali
-
-// Comunicazione
-char String [Comunicazione()];
-
-// 1. Instantiate the display OBJECT here (global)
-GigaDisplay_GFX gigaDisplay;
-
-// 2. Instantiate your visualizer
-Imu3DVisualizer visualizer;
-
-Arduino_H7_Video Display(800, 480, GigaDisplayShield);
-
-Arduino_GigaDisplayTouch TouchDetector;
-
+// Crea gli oggetti globali per i moduli
+Display display;
+BleNetwork myNetwork;
 
 void setup() {
+  Serial.begin(115200);
+  // while (!Serial); // Decommentare se si riscontrano problemi con l'output seriale all'avvio
 
-  Serial.begin(115200);    // Inizializza la comunicazione seriale
-  ble.begin();             // Inizializza il modulo BLE
-  gigaDisplay.begin();     // Inizializza Display first!
-  visualizer.begin();      // Inizializza Visualizer
-  Display.begin();         // Inizializza Display
-  TouchDetector.begin();   // Inizializza Touch Detector
-  myNetwork.begin();       // Inizializza BLE   BleNetwork
+  Serial.println("--- Avvio Bracciale Giga ---");
 
-  //Display & Grid Setup
-  lv_obj_t* screen = lv_obj_create(lv_scr_act());
-  lv_obj_set_size(screen, Display.width(), Display.height());
+  // Inizializza i moduli
+  display.begin();
+  myNetwork.begin();
 
-  static lv_coord_t col_dsc[] = { 370, 370, LV_GRID_TEMPLATE_LAST };
-  static lv_coord_t row_dsc[] = { 215, 215, 215, 215, LV_GRID_TEMPLATE_LAST };
-
-  lv_obj_t* grid = lv_obj_create(lv_scr_act());
-  lv_obj_set_grid_dsc_array(grid, col_dsc, row_dsc);
-  lv_obj_set_size(grid, Display.width(), Display.height());
-
-  //top left
-  lv_obj_t* obj;
-  obj = lv_obj_create(grid);
-  lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 0, 1,  //column
-                       LV_GRID_ALIGN_STRETCH, 0, 1);      //row
-
-  //bottom left
-  obj = lv_obj_create(grid);
-  lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 0, 1,  //column
-                       LV_GRID_ALIGN_STRETCH, 1, 1);      //row
-  //top right
-  obj = lv_obj_create(grid);
-  lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 1, 1,  //column
-                       LV_GRID_ALIGN_STRETCH, 0, 1);      //row
-
-  //bottom right
-  obj = lv_obj_create(grid);
-  lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 1, 1,  //column
-                       LV_GRID_ALIGN_STRETCH, 1, 1);      //row
-
+  Serial.println("Setup completato. Premi 'Scan' per cercare i dispositivi.");
 }
 
 void loop() {
+  // 1. Controlla l'input dell'utente (touchscreen)
+  Display::ButtonId pressedButton = display.checkTouch();
 
-  // 1. Mantiene viva la rete (fa tutto lui: scansione, riconnessione, lettura dati)
-  myNetwork.update();
+  // 2. Esegue un'azione in base all'input
+  switch (pressedButton) {
+    case Display::BUTTON_SCAN:
+      Serial.println("Pulsante 'Scan' premuto!");
+      myNetwork.startScan(); // Avvia la scansione BLE
+      break;
 
-  // 2. Logica applicativa (esempio timer)
-  if (millis() - previousMillis >= 5000) {
-    previousMillis = millis();
+    case Display::BUTTON_STATUS:
+      Serial.println("Pulsante 'Status' premuto!");
+      // TODO: Mostrare una schermata di stato
+      // display.showStatusScreen(myNetwork.isSenseConnected(), myNetwork.isIoTConnected());
+      break;
 
-    // Esempio: Controlla se siamo connessi
-    if (myNetwork.isSenseConnected() && myNetwork.isIoTConnected()) {
-      Serial.print("Sistema Online. Temp Attuale: ");
-      Serial.println(myNetwork.getLatestTemperature());
-      
-      // Invia comando all'altra scheda
-      myNetwork.toggleActuator();
-    } else {
-      Serial.println("In attesa delle connessioni...");
-    }
+    case Display::NONE:
+      // Nessun pulsante premuto, non fare nulla
+      break;
   }
 
-  Serial.println(" Prova di funzionamento");
+  // 3. Aggiorna la logica di rete (gestisce connessioni, riceve dati, etc.)
+  myNetwork.update();
 
-  Serial.println(**Comunicazione()**);  // Esegue la funzione dal modulo Comunicazione (attualmente vuota)
-  Serial.println("-------------------");
+  // 4. Aggiorna il display con lo stato corrente
+  display.updateStatus(myNetwork.isScanning(), myNetwork.isSenseConnected(), myNetwork.isIoTConnected());
 
-  lv_timer_handler();               // Gestione LVGL
+  // 5. Aggiungiamo una logica per fermare la scansione una volta connessi
+  if (myNetwork.isScanning() && myNetwork.isSenseConnected() && myNetwork.isIoTConnected()) {
+    Serial.println("Trovati e connessi a entrambi i dispositivi. Interrompo scansione.");
+    myNetwork.stopScan();
+  }
 
-  // visualizer.updateAndDraw();    // Aggiorna e disegna il visualizzatore
-
-  delay(500);
+  delay(20); // Piccolo ritardo per stabilità generale
 }
