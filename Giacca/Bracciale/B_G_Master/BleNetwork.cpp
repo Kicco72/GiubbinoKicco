@@ -71,6 +71,7 @@ void BleNetwork::update()
         {
             Serial.println("Avviso: Connessione con Sense persa!");
             _senseConnected = false;
+            // Opzionale: Riavviare scansione qui se si vuole auto-reconnect immediato
         }
         else
         {
@@ -86,6 +87,12 @@ void BleNetwork::update()
             Serial.println("Avviso: Connessione con IoT persa!");
             _iotConnected = false;
         }
+    }
+
+    // Logica di Auto-Recovery: Se abbiamo perso una connessione e non stiamo scansionando, ripartiamo?
+    // Per ora lasciamo manuale tramite pulsante, ma resettiamo lo stato interno se necessario.
+    if (!_senseConnected && !_iotConnected && !_isScanning) {
+        // Siamo completamente disconnessi.
     }
 }
 

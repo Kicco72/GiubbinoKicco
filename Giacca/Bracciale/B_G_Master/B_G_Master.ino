@@ -8,11 +8,17 @@
 // Includi i moduli del progetto
 #include "Display.h"
 #include "BleNetwork.h"
+#include "Imu3DVisualizer.h"
 #include <Arduino_GigaDisplayTouch.h>
+#include <Arduino_GigaDisplay_GFX.h>
+
+// Oggetto Display Globale (condiviso tra Display.cpp e Imu3DVisualizer.cpp)
+GigaDisplay_GFX gigaDisplay;
 
 // Crea gli oggetti globali per i moduli
 Display display;
 BleNetwork myNetwork;
+Imu3DVisualizer imuViz;
 
 void setup() {
   Serial.begin(115200);
@@ -23,6 +29,11 @@ void setup() {
   // Inizializza i moduli
   display.begin();
   myNetwork.begin();
+  
+  // Inizializza IMU
+  if (!imuViz.begin()) {
+    Serial.println("Errore inizializzazione IMU!");
+  }
 
   Serial.println("Setup completato. Premi 'Scan' per cercare i dispositivi.");
 }
@@ -44,6 +55,11 @@ void loop() {
       // display.showStatusScreen(myNetwork.isSenseConnected(), myNetwork.isIoTConnected());
       break;
 
+    case Display::BUTTON_LED:
+      Serial.println("Pulsante 'LED' premuto!");
+      myNetwork.toggleActuator();
+      break;
+
     case Display::NONE:
       // Nessun pulsante premuto, non fare nulla
       break;
@@ -54,12 +70,22 @@ void loop() {
 
   // 4. Aggiorna il display con lo stato corrente
   display.updateStatus(myNetwork.isScanning(), myNetwork.isSenseConnected(), myNetwork.isIoTConnected());
+  
+  // Aggiorna la temperatura sul display se connesso a Sense
+  if (myNetwork.isSenseConnected()) {
+    display.updateTemperature(myNetwork.getLatestTemperature());
+  }
 
-  // 5. Aggiungiamo una logica per fermare la scansione una volta connessi
+  // 5. Aggiorna la visualizzazione 3D (Sfera)
+  // Disegna sempre la sfera al centro
+  imuViz.updateAndDraw();
+
+  // 6. Aggiungiamo una logica per fermare la scansione una volta connessi
   if (myNetwork.isScanning() && myNetwork.isSenseConnected() && myNetwork.isIoTConnected()) {
     Serial.println("Trovati e connessi a entrambi i dispositivi. Interrompo scansione.");
     myNetwork.stopScan();
   }
 
-  delay(20); // Piccolo ritardo per stabilità generale
+  // Rimosso delay(20) per rendere l'animazione 3D più fluida
+  // Il touch ha già il suo debounce interno o gestito in checkTouch
 }

@@ -1,28 +1,34 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-#include <Arduino_GigaDisplay.h>
+#include <Arduino.h>
+#include <Arduino_GigaDisplay_GFX.h>
 #include <Arduino_GigaDisplayTouch.h>
+
+// Riferimento all'oggetto display globale definito nel .ino
+extern GigaDisplay_GFX gigaDisplay;
 
 class Display {
 public:
-    // Enum per identificare quale pulsante è stato premuto
     enum ButtonId {
         NONE,
         BUTTON_SCAN,
-        BUTTON_STATUS
+        BUTTON_STATUS,
+        BUTTON_LED // Nuovo pulsante per il LED
     };
 
     Display();
     void begin();
     void showBaseScreen();
     ButtonId checkTouch();
+    
     void updateStatus(bool isScanning, bool isSenseConnected, bool isIoTConnected);
+    void updateTemperature(float temp);
 
 private:
-    Arduino_GigaDisplay _display;
     Arduino_GigaDisplayTouch _touchDetector;
-    String _lastStatusMessage; // Per evitare sfarfallio
+    String _lastStatusMessage;
+    float _lastTempDisplayed;
 };
 
-#endif // DISPLAY_H 
+#endif
