@@ -164,6 +164,18 @@ bool BleNetwork::connectToSense(BLEDevice p)
         p.disconnect();
         return false;
     }
+
+    // Sottoscrizione alle caratteristiche per ricevere le notifiche
+    BLECharacteristic tChar = p.characteristic(_uuidSenseCharTemp);
+    if (tChar && tChar.canSubscribe()) {
+        tChar.subscribe();
+    }
+
+    BLECharacteristic hChar = p.characteristic(_uuidSenseCharHum);
+    if (hChar && hChar.canSubscribe()) {
+        hChar.subscribe();
+    }
+
     _senseDevice = p;
     return true;
 }

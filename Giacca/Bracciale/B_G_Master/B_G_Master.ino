@@ -8,8 +8,10 @@
 #include "Display.h"
 #include "BleNetwork.h"
 #include "Imu3DVisualizer.h"
+#include "Stato.h" // Includi la nuova gestione stati
 #include <Arduino_GigaDisplayTouch.h>
 #include <Arduino_GigaDisplay_GFX.h>
+
 
 // Oggetto Display Globale (condiviso tra Display.cpp e Imu3DVisualizer.cpp)
 GigaDisplay_GFX gigaDisplay;
@@ -18,9 +20,11 @@ GigaDisplay_GFX gigaDisplay;
 Display display;
 BleNetwork myNetwork;
 Imu3DVisualizer imuViz;
+Stato gestioneStato; // Oggetto per gestire il LED
 
 // Variabile di stato per la modalità di visualizzazione
 bool imuMode = false;
+bool imuOk = false; // Flag per tracciare lo stato dell'hardware IMU
 
 void setup()
 {
@@ -32,11 +36,15 @@ void setup()
   // Inizializza i moduli
   display.begin();
   myNetwork.begin();
+  gestioneStato.begin(); // Avvia gestione LED
 
   // Inizializza IMU
   if (!imuViz.begin())
   {
     Serial.println("Errore inizializzazione IMU!");
+    imuOk = false;
+  } else {
+    imuOk = true;
   }
 
   // Ripristina la schermata base (pulsanti e titolo) perché l'init IMU ha pulito lo schermo
@@ -69,12 +77,14 @@ void loop()
       gigaDisplay.fillScreen(0x0000); // Pulisci schermo
       display.drawButtons();          // Disegna pulsanti aggiornati
       imuViz.drawBackground();        // Prepara sfondo IMU
+      display.resetStateIcon();       // Forza ridisegno LED virtuale
     }
     else
     {
       // Torna alla base: Ripristina tasto "IMU"
       display.setButtonLabel(Display::BUTTON_IMU, "IMU");
       display.showBaseScreen(); // Ripristina schermata base
+      // showBaseScreen chiama già resetStateIcon internamente o possiamo chiamarlo qui
     }
     break;
 
@@ -116,6 +126,37 @@ void loop()
     Serial.println("Trovati e connessi a entrambi i dispositivi. Interrompo scansione.");
     myNetwork.stopScan();
   }
+
+  // 7. Gestione Stato Sistema (LED RGB) con criteri aggiornati
+  
+  // Recupera temperatura corrente
+  float temp = myNetwork.getLatestTemperature();
+  // Definisci soglie di allarme (es. sotto 10°C o sopra 30°C)
+  bool allarmeTemp = (temp < 10.0 || temp > 30.0) && (temp != 0.0);
+
+  uint16_t coloreStato = VERDE; // Default
+
+  if (!imuOk || !myNetwork.isSenseConnected() || !myNetwork.isIoTConnected()) 
+  {
+    // Se qualcosa non funziona o non è connesso -> Rosso (Pericolo)
+    gestioneStato.imposta(Stato::PERICOLO);
+    coloreStato = ROSSO;
+  }
+  else if (allarmeTemp) 
+  {
+    // Tutto connesso ma temperatura fuori range -> Giallo (Attenzione)
+    gestioneStato.imposta(Stato::ATTENZIONE);
+    coloreStato = GIALLO;
+  }
+  else 
+  {
+    // Tutto funziona e temperatura OK -> Verde (Normale)
+    gestioneStato.imposta(Stato::NORMALE);
+    coloreStato = VERDE;
+  }
+  
+  // Aggiorna l'icona sul display (LED Virtuale)
+  display.updateStateIcon(coloreStato);
 
   // Rimosso delay(20) per rendere l'animazione 3D più fluida
   // Il touch ha già il suo debounce interno o gestito in checkTouch

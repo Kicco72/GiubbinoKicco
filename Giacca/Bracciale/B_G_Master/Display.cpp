@@ -30,7 +30,7 @@ namespace
     const int NUM_BUTTONS = sizeof(buttons) / sizeof(Button);
 }
 
-Display::Display() : _lastStatusMessage(""), _lastTempDisplayed(-999.0), _lastHumDisplayed(-999.0) {}
+Display::Display() : _lastStatusMessage(""), _lastTempDisplayed(-999.0), _lastHumDisplayed(-999.0), _lastStateColor(0) {}
 
 void Display::begin()
 {
@@ -46,13 +46,14 @@ void Display::showBaseScreen()
     gigaDisplay.setTextColor(BIANCO);
     gigaDisplay.setTextSize(4);
     gigaDisplay.setCursor(300, 30); // Centrato (800px)
-    gigaDisplay.println("Bracciale");
+    gigaDisplay.println("Kicco972.net");
 
     gigaDisplay.setTextSize(2);
     gigaDisplay.setCursor(320, 80);
     gigaDisplay.println("Sistema Attivo");
 
     drawButtons();
+    resetStateIcon(); // Forza il ridisegno dell'icona di stato
 }
 
 void Display::drawButtons()
@@ -231,4 +232,22 @@ void Display::updateHumidity(float hum)
         gigaDisplay.print(hum, 1);
         gigaDisplay.print(" %");
     }
+}
+
+void Display::updateStateIcon(uint16_t color)
+{
+    // Aggiorna solo se il colore cambia per evitare sfarfallio
+    if (_lastStateColor != color)
+    {
+        _lastStateColor = color;
+        // Disegna un cerchio pieno in alto a destra come "LED virtuale"
+        gigaDisplay.fillCircle(750, 40, 20, color);
+        // Bordo bianco per visibilità
+        gigaDisplay.drawCircle(750, 40, 20, BIANCO);
+    }
+}
+
+void Display::resetStateIcon()
+{
+    _lastStateColor = 0x1234; // Imposta un valore impossibile per forzare l'aggiornamento
 }

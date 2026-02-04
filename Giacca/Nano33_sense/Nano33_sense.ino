@@ -1,84 +1,97 @@
+/*
+  Nano33_sense.ino
+  Codice per Arduino Nano 33 BLE Sense
+  Funzione: Periferica BLE che invia la temperatura al Master
+*/
+
 #include <ArduinoBLE.h>
+#include <Arduino_HTS221.h> // Libreria per sensore temperatura (Rev1). Usa Arduino_HS300x per Rev2.
 
-void setup() {
-  Serial.begin(9600);
-  while (!Serial);
+// UUID del servizio Environmental Sensing (Standard 0x181A)
+BLEService envService("181A");
 
-  // initialize the Bluetooth® Low Energy hardware
-  BLE.begin();
+// UUID della caratteristica Temperature (Standard 0x2A6E)
+// Nota: Il Master si aspetta un float (4 byte), quindi usiamo BLEFloatCharacteristic
+BLEFloatCharacteristic tempCharacteristic("2A6E", BLERead | BLENotify);
+// UUID della caratteristica Humidity (Standard 0x2A6F)
+BLEFloatCharacteristic humCharacteristic("2A6F", BLERead | BLENotify);
 
-  Serial.println("Bluetooth® Low Energy Central - Nano Sense");
+long previousMillis = 0;
 
-  // start scanning for peripherals
-  BLE.scanForUuid("19b10000-e8f2-537e-4f6c-d104768a1214");
-}
+void setup()
+{
+    Serial.begin(115200);
 
-void loop() {
-  // check if a peripheral has been discovered
-  BLEDevice peripheral = BLE.available();
-
-  if (peripheral) {
-    // discovered a peripheral, print out address, local name, and advertised service
-    Serial.print("Found ");
-    Serial.print(peripheral.address());
-    Serial.print(" '");
-    Serial.print(peripheral.localName());
-    Serial.print("' ");
-    Serial.print(peripheral.advertisedServiceUuid());
-    Serial.println();
-
-    if (peripheral.localName() != "Nano 33 Sense") {
-      return;
+    // Inizializzazione sensore HTS221
+    if (!HTS.begin())
+    {
+        Serial.println("Errore: Impossibile inizializzare sensore HTS221!");
+        while (1)
+            ;
     }
 
-    // stop scanning
-    BLE.stopScan();
+    // Inizializzazione BLE
+    if (!BLE.begin())
+    {
+        Serial.println("Errore: Impossibile avviare BLE!");
+        while (1)
+            ;
+    }
 
-    controlLed(peripheral);
+    // Imposta il nome locale che il Master cerca ("NanoSense")
+    BLE.setLocalName("NanoSense");
 
-    // peripheral disconnected, start scanning again
-    BLE.scanForUuid("19b10000-e8f2-537e-4f6c-d104768a1214");
-  }
+    // Imposta il servizio pubblicizzato
+    BLE.setAdvertisedService(envService);
+
+    // Aggiungi la caratteristica al servizio
+    envService.addCharacteristic(tempCharacteristic);
+    envService.addCharacteristic(humCharacteristic);
+
+    // Aggiungi il servizio
+    BLE.addService(envService);
+
+    // Avvia la pubblicità
+    BLE.advertise();
+
+    Serial.println("NanoSense pronto e in ascolto...");
 }
 
-void controlLed(BLEDevice peripheral) {
-  // connect to the peripheral
-  Serial.println("Connecting ...");
+void loop()
+{
+    // Attendi connessione da un centrale
+    BLEDevice central = BLE.central();
 
-  if (peripheral.connect()) {
-    Serial.println("Connected");
-  } else {
-    Serial.println("Failed to connect!");
-    return;
-  }
+    if (central)
+    {
+        Serial.print("Connesso al centrale: ");
+        Serial.println(central.address());
 
-  // discover peripheral attributes
-  Serial.println("Discovering attributes ...");
-  if (peripheral.discoverAttributes()) {
-    Serial.println("Attributes discovered");
-  } else {
-    Serial.println("Attribute discovery failed!");
-    peripheral.disconnect();
-    return;
-  }
+        while (central.connected())
+        {
+            long currentMillis = millis();
 
-  // retrieve the LED characteristic
-  BLECharacteristic NanoCharacteristic = peripheral.characteristic("19b10001-e8f2-537e-4f6c-d104768a1214");
+            // Leggi e invia la temperatura ogni 2 secondi
+            if (currentMillis - previousMillis >= 2000)
+            {
+                previousMillis = currentMillis;
 
-  if (!NanoCharacteristic) {
-    Serial.println("Peripheral does not have Nano characteristic!");
-    peripheral.disconnect();
-    return;
-  } else if (!NanoCharacteristic.canWrite()) {
-    Serial.println("Peripheral does not have a writable Nano characteristic!");
-    peripheral.disconnect();
-    return;
-  }
+                float temperature = HTS.readTemperature();
+                float humidity = HTS.readHumidity();
 
-  while (peripheral.connected()) {
-    // while the peripheral is connected
+                Serial.print("Temperatura inviata: ");
+                Serial.print(temperature);
+                Serial.println(" °C");
 
-  }
+                Serial.print("Umidità inviata: ");
+                Serial.print(humidity);
+                Serial.println(" %");
 
-  Serial.println("Peripheral disconnected");
+                tempCharacteristic.writeValue(temperature);
+                humCharacteristic.writeValue(humidity);
+            }
+        }
+
+        Serial.println("Disconnesso dal centrale.");
+    }
 }

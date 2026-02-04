@@ -27,12 +27,16 @@ public:
     void updateStatus(bool isScanning, bool isSenseConnected, bool isIoTConnected);
     void updateTemperature(float temp);
     void updateHumidity(float hum);
+    
+    void updateStateIcon(uint16_t color); // Disegna il LED virtuale
+    void resetStateIcon(); // Forza il ridisegno (utile al cambio schermata)
 
 private:
     Arduino_GigaDisplayTouch _touchDetector;
     String _lastStatusMessage;
     float _lastTempDisplayed;
     float _lastHumDisplayed;
+    uint16_t _lastStateColor;
 };
 
 #endif
