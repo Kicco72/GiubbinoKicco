@@ -26,6 +26,7 @@ class BleNetwork {
 
     // Metodi per interagire con i dati
     float getLatestTemperature();
+    float getLatestHumidity();
     void toggleActuator();
 
     // Stato delle connessioni (per debug/led)
@@ -44,12 +45,14 @@ class BleNetwork {
     
     // Dati salvati
     float _lastTemperature;
+    float _lastHumidity;
     bool _actuatorState;
     unsigned long _lastPollTime; // Per temporizzare la lettura
 
     // UUIDs
     const char* _uuidSenseService;
     const char* _uuidSenseCharTemp;
+    const char* _uuidSenseCharHum;
     const char* _uuidIoTService;
     const char* _uuidIoTCharSwitch;
 

@@ -13,7 +13,7 @@ public:
     enum ButtonId {
         NONE,
         BUTTON_SCAN,
-        BUTTON_STATUS,
+        BUTTON_IMU, // Modificato da STATUS a IMU
         BUTTON_LED // Nuovo pulsante per il LED
     };
 
@@ -21,14 +21,18 @@ public:
     void begin();
     void showBaseScreen();
     ButtonId checkTouch();
+    void drawButtons(); // Metodo reso pubblico per ridisegnare i pulsanti in altre schermate
+    void setButtonLabel(ButtonId id, const char* label); // Nuovo metodo per cambiare etichetta
     
     void updateStatus(bool isScanning, bool isSenseConnected, bool isIoTConnected);
     void updateTemperature(float temp);
+    void updateHumidity(float hum);
 
 private:
     Arduino_GigaDisplayTouch _touchDetector;
     String _lastStatusMessage;
     float _lastTempDisplayed;
+    float _lastHumDisplayed;
 };
 
 #endif

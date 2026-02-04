@@ -21,20 +21,21 @@ namespace
         const char *label;
     };
 
-    // Spostiamo i pulsanti in basso (Y=650) per lasciare spazio alla sfera al centro (Y=400)
-    // Array con i nostri pulsanti
+    // Layout Landscape (800x480)
+    // Pulsanti in basso (Y=380), Centrati orizzontalmente
     Button buttons[] = {
-        {Display::BUTTON_SCAN, 20, 650, 140, 80, "Scan"},
-        {Display::BUTTON_STATUS, 170, 650, 140, 80, "Info"},
-        {Display::BUTTON_LED, 320, 650, 140, 80, "LED"}};
+        {Display::BUTTON_SCAN, 150, 380, 140, 80, "Scan"},
+        {Display::BUTTON_IMU, 330, 380, 140, 80, "IMU"},
+        {Display::BUTTON_LED, 510, 380, 140, 80, "LED"}};
     const int NUM_BUTTONS = sizeof(buttons) / sizeof(Button);
 }
 
-Display::Display() : _lastStatusMessage(""), _lastTempDisplayed(-999.0) {}
+Display::Display() : _lastStatusMessage(""), _lastTempDisplayed(-999.0), _lastHumDisplayed(-999.0) {}
 
 void Display::begin()
 {
-    gigaDisplay.begin(); // Usa l'oggetto globale
+    gigaDisplay.begin();        // Usa l'oggetto globale
+    gigaDisplay.setRotation(1); // Imposta orientamento Landscape (800x480)
     _touchDetector.begin();
     showBaseScreen();
 }
@@ -44,14 +45,18 @@ void Display::showBaseScreen()
     gigaDisplay.fillScreen(NERO);
     gigaDisplay.setTextColor(BIANCO);
     gigaDisplay.setTextSize(4);
-    gigaDisplay.setCursor(130, 30);
+    gigaDisplay.setCursor(300, 30); // Centrato (800px)
     gigaDisplay.println("Bracciale");
 
     gigaDisplay.setTextSize(2);
-    gigaDisplay.setCursor(180, 80);
+    gigaDisplay.setCursor(320, 80);
     gigaDisplay.println("Sistema Attivo");
 
-    // Disegna i pulsanti
+    drawButtons();
+}
+
+void Display::drawButtons()
+{
     for (int i = 0; i < NUM_BUTTONS; ++i)
     {
         gigaDisplay.drawRect(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, BIANCO);
@@ -62,20 +67,51 @@ void Display::showBaseScreen()
     }
 }
 
+void Display::setButtonLabel(ButtonId id, const char *label)
+{
+    for (int i = 0; i < NUM_BUTTONS; ++i)
+    {
+        if (buttons[i].id == id)
+        {
+            buttons[i].label = label;
+            break;
+        }
+    }
+}
+
 Display::ButtonId Display::checkTouch()
 {
-    // Controlla se lo schermo è stato premuto
-    if (_touchDetector.isPressed())
-    {
-        TouchData touch = _touchDetector.read();
+    GDTpoint_t points[1];
+    uint8_t contacts = _touchDetector.getTouchPoints(points);
 
-        // I dati del tocco (touch.x, touch.y) sono già mappati sulle coordinate dello schermo
+    // Controlla se lo schermo è stato premuto
+    if (contacts > 0)
+    {
+        // Recupera coordinate native (Portrait)
+        uint16_t rawX = points[0].x;
+        uint16_t rawY = points[0].y;
+
+        // DEBUG: Decommenta se vuoi vedere le coordinate grezze sul monitor seriale
+        // Serial.print("Raw: "); Serial.print(rawX); Serial.print(","); Serial.println(rawY);
+
+        // Limita i valori per evitare underflow/overflow nella mappatura
+        if (rawX > 480)
+            rawX = 480;
+        if (rawY > 800)
+            rawY = 800;
+
+        // Mappatura coordinate per Landscape (Rotation 1)
+        // Correzione assi per rotazione 90° standard
+        // X Visuale = Y Touch
+        // Y Visuale = 480 - X Touch
+        uint16_t x = rawY;
+        uint16_t y = 480 - rawX;
 
         // Controlla se il tocco è avvenuto all'interno di uno dei pulsanti
         for (int i = 0; i < NUM_BUTTONS; ++i)
         {
-            bool insideX = (touch.x >= buttons[i].x) && (touch.x <= buttons[i].x + buttons[i].w);
-            bool insideY = (touch.y >= buttons[i].y) && (touch.y <= buttons[i].y + buttons[i].h);
+            bool insideX = (x >= buttons[i].x) && (x <= buttons[i].x + buttons[i].w);
+            bool insideY = (y >= buttons[i].y) && (y <= buttons[i].y + buttons[i].h);
 
             if (insideX && insideY)
             {
@@ -88,10 +124,17 @@ Display::ButtonId Display::checkTouch()
                 delay(150); // Breve ritardo per mostrare l'effetto e per debounce
 
                 // Ripristina l'aspetto del pulsante
+                gigaDisplay.fillRect(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, NERO); // Pulisci lo sfondo bianco
                 gigaDisplay.drawRect(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, BIANCO);
                 gigaDisplay.setTextColor(BIANCO);
                 gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 30);
                 gigaDisplay.print(buttons[i].label);
+
+                // Attendi il rilascio del touch per evitare trigger multipli (debounce)
+                while (_touchDetector.getTouchPoints(points) > 0)
+                {
+                    delay(50);
+                }
 
                 return buttons[i].id; // Ritorna l'ID del pulsante premuto
             }
@@ -134,8 +177,8 @@ void Display::updateStatus(bool isScanning, bool isSenseConnected, bool isIoTCon
     {
         // Definisce l'area in cui disegnare lo stato
         const int STATUS_X = 20;
-        const int STATUS_Y = 600; // Sopra i pulsanti
-        const int STATUS_W = 440;
+        const int STATUS_Y = 330; // Sopra i pulsanti (Y=380)
+        const int STATUS_W = 760; // Più largo per landscape
         const int STATUS_H = 40;
 
         // Pulisci l'area di stato
@@ -160,13 +203,32 @@ void Display::updateTemperature(float temp)
         _lastTempDisplayed = temp;
 
         // Area Temperatura (in alto a sinistra/centro)
-        gigaDisplay.fillRect(20, 120, 440, 50, NERO);
+        gigaDisplay.fillRect(200, 130, 400, 50, NERO); // Centrato
 
         gigaDisplay.setTextColor(VERDE);
         gigaDisplay.setTextSize(4);
-        gigaDisplay.setCursor(80, 130);
+        gigaDisplay.setCursor(260, 140);
         gigaDisplay.print("Temp: ");
         gigaDisplay.print(temp, 1);
         gigaDisplay.print(" C");
+    }
+}
+
+void Display::updateHumidity(float hum)
+{
+    // Aggiorna solo se cambia significativamente (0.1 %)
+    if (abs(hum - _lastHumDisplayed) > 0.1)
+    {
+        _lastHumDisplayed = hum;
+
+        // Area Umidità (sotto la temperatura)
+        gigaDisplay.fillRect(200, 190, 400, 50, NERO); // Centrato, Y=190
+
+        gigaDisplay.setTextColor(CIANO);
+        gigaDisplay.setTextSize(4);
+        gigaDisplay.setCursor(260, 200);
+        gigaDisplay.print("Hum:  ");
+        gigaDisplay.print(hum, 1);
+        gigaDisplay.print(" %");
     }
 }

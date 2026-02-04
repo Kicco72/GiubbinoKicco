@@ -34,6 +34,7 @@ public:
     Imu3DVisualizer();
     bool begin();
     void updateAndDraw();
+    void drawBackground(); // Nuovo metodo per disegnare gli elementi statici
 
 private:
     // Current orientation

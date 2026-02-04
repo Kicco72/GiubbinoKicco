@@ -7,15 +7,17 @@ BleNetwork::BleNetwork()
     _senseConnected = false;
     _iotConnected = false;
     _lastTemperature = 0.0;
+    _lastHumidity = 0.0;
     _actuatorState = false;
-    
+
     // Inizializziamo la nostra flag di scansione a false
-    _isScanning = false; 
+    _isScanning = false;
 
     // Definizione degli UUID
-    _uuidSenseService = "181A";      
-    _uuidSenseCharTemp = "2A6E";     
-    
+    _uuidSenseService = "181A";
+    _uuidSenseCharTemp = "2A6E";
+    _uuidSenseCharHum = "2A6F";
+
     _uuidIoTService = "19B10000-E8F2-537E-4F6C-D104768A1214";
     _uuidIoTCharSwitch = "19B10001-E8F2-537E-4F6C-D104768A1214";
 }
@@ -26,25 +28,30 @@ void BleNetwork::begin()
     if (!BLE.begin())
     {
         Serial.println("ERRORE: Impossibile avviare il modulo BLE!");
-        while (1);
+        while (1)
+            ;
     }
     Serial.println("Stato: Modulo BLE avviato correttamente.");
 }
 
 // --- Gestione Scansione ---
 
-void BleNetwork::startScan() {
+void BleNetwork::startScan()
+{
     // Controllo la mia variabile interna invece di BLE.isScanning()
-    if (!_isScanning) {
+    if (!_isScanning)
+    {
         Serial.println("Comando: Avvio scansione manuale...");
-        BLE.scan(true); 
+        BLE.scan(true);
         _isScanning = true; // Aggiorno lo stato
     }
 }
 
-void BleNetwork::stopScan() {
+void BleNetwork::stopScan()
+{
     // Controllo la mia variabile interna
-    if (_isScanning) {
+    if (_isScanning)
+    {
         BLE.stopScan();
         Serial.println("Comando: Scansione interrotta.");
         _isScanning = false; // Aggiorno lo stato
@@ -52,7 +59,8 @@ void BleNetwork::stopScan() {
 }
 
 // Getter pubblico per sapere se stiamo scansionando
-bool BleNetwork::isScanning() {
+bool BleNetwork::isScanning()
+{
     return _isScanning; // Ritorno la variabile locale, NON chiamo la libreria
 }
 
@@ -60,7 +68,8 @@ bool BleNetwork::isScanning() {
 void BleNetwork::update()
 {
     // 1. Uso la variabile interna per sapere se devo cercare dispositivi
-    if (_isScanning) {
+    if (_isScanning)
+    {
         scanAndConnect();
     }
 
@@ -91,7 +100,8 @@ void BleNetwork::update()
 
     // Logica di Auto-Recovery: Se abbiamo perso una connessione e non stiamo scansionando, ripartiamo?
     // Per ora lasciamo manuale tramite pulsante, ma resettiamo lo stato interno se necessario.
-    if (!_senseConnected && !_iotConnected && !_isScanning) {
+    if (!_senseConnected && !_iotConnected && !_isScanning)
+    {
         // Siamo completamente disconnessi.
     }
 }
@@ -107,36 +117,36 @@ void BleNetwork::scanAndConnect()
         if (peripheral.localName() == "NanoSense" && !_senseConnected)
         {
             // Importante: usare il metodo della classe che gestisce anche la flag _isScanning
-            stopScan(); 
-            
+            stopScan();
+
             if (connectToSense(peripheral))
             {
                 _senseConnected = true;
                 Serial.println(">> Successo: Dispositivo Sense Connesso");
             }
-            else 
+            else
             {
-                 Serial.println(">> Errore: Connessione a Sense fallita");
+                Serial.println(">> Errore: Connessione a Sense fallita");
             }
-            
+
             // Riavvia usando il metodo della classe
-            startScan(); 
+            startScan();
         }
         // Caso B: NanoIoT
         else if (peripheral.localName() == "NanoIoT" && !_iotConnected)
         {
             stopScan(); // Usa il metodo interno
-            
+
             if (connectToIoT(peripheral))
             {
                 _iotConnected = true;
                 Serial.println(">> Successo: Dispositivo IoT Connesso");
             }
-            else 
+            else
             {
-                 Serial.println(">> Errore: Connessione a IoT fallita");
+                Serial.println(">> Errore: Connessione a IoT fallita");
             }
-            
+
             startScan(); // Usa il metodo interno
         }
     }
@@ -145,7 +155,8 @@ void BleNetwork::scanAndConnect()
 // Helper per connettere Sense
 bool BleNetwork::connectToSense(BLEDevice p)
 {
-    if (!p.connect()) {
+    if (!p.connect())
+    {
         return false;
     }
     if (!p.discoverAttributes())
@@ -160,7 +171,8 @@ bool BleNetwork::connectToSense(BLEDevice p)
 // Helper per connettere IoT
 bool BleNetwork::connectToIoT(BLEDevice p)
 {
-    if (!p.connect()) {
+    if (!p.connect())
+    {
         return false;
     }
     if (!p.discoverAttributes())
@@ -177,22 +189,35 @@ bool BleNetwork::connectToIoT(BLEDevice p)
 void BleNetwork::pollSense()
 {
     BLECharacteristic tChar = _senseDevice.characteristic(_uuidSenseCharTemp);
+    BLECharacteristic hChar = _senseDevice.characteristic(_uuidSenseCharHum);
 
     if (tChar && tChar.valueUpdated())
     {
         float temp = 0.0;
         tChar.readValue(&temp, sizeof(temp));
-        
+
         _lastTemperature = temp;
         Serial.print("Dati: Temperatura aggiornata -> ");
         Serial.print(_lastTemperature);
         Serial.println(" °C");
     }
+
+    if (hChar && hChar.valueUpdated())
+    {
+        float hum = 0.0;
+        hChar.readValue(&hum, sizeof(hum));
+
+        _lastHumidity = hum;
+        Serial.print("Dati: Umidità aggiornata -> ");
+        Serial.print(_lastHumidity);
+        Serial.println(" %");
+    }
 }
 
 void BleNetwork::writeIoT(bool state)
 {
-    if (!_iotConnected) {
+    if (!_iotConnected)
+    {
         Serial.println("Errore: Impossibile scrivere, IoT non connesso.");
         return;
     }
@@ -201,7 +226,7 @@ void BleNetwork::writeIoT(bool state)
     if (sChar)
     {
         byte val = state ? 1 : 0;
-        sChar.writeValue(&val, 1); 
+        sChar.writeValue(&val, 1);
     }
 }
 
@@ -212,11 +237,16 @@ float BleNetwork::getLatestTemperature()
     return _lastTemperature;
 }
 
+float BleNetwork::getLatestHumidity()
+{
+    return _lastHumidity;
+}
+
 void BleNetwork::toggleActuator()
 {
     _actuatorState = !_actuatorState;
     writeIoT(_actuatorState);
-    
+
     Serial.print("Azione: Comando interruttore inviato -> ");
     Serial.println(_actuatorState ? "ON" : "OFF");
 }
