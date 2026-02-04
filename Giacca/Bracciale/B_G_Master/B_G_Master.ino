@@ -1,9 +1,14 @@
+
+
+
+
 // Progetto Bracciale Giubbino
 // di Kicco972, 2025
 
 // Includi i moduli del progetto
 #include "Display.h"
 #include "BleNetwork.h"
+#include <Arduino_GigaDisplayTouch.h>
 
 // Crea gli oggetti globali per i moduli
 Display display;

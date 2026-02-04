@@ -71,7 +71,7 @@ Display::ButtonId Display::checkTouch() {
             if (insideX && insideY) {
                 // Trovato! Aggiungiamo un feedback visivo.
                 _display.fillRect(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, BIANCO);
-                _display.setTextColor(BLACK);
+                _display.setTextColor(NERO);
                 _display.setCursor(buttons[i].x + 35, buttons[i].y + 28);
                 _display.print(buttons[i].label);
                 

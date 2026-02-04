@@ -40,10 +40,12 @@ class BleNetwork {
     // Variabili di stato
     bool _senseConnected;
     bool _iotConnected;
+    bool _isScanning;
     
     // Dati salvati
     float _lastTemperature;
     bool _actuatorState;
+    unsigned long _lastPollTime; // Per temporizzare la lettura
 
     // UUIDs
     const char* _uuidSenseService;

@@ -37,7 +37,7 @@ bool Imu3DVisualizer::begin() {
   gigaDisplay.fillScreen(NERO);
 
   // Draw static reference circle
-  gigaDisplay.drawCircle(gigaDisplay.width() / 2, gigaDisplay.height() / 2, 100, GRIGIO);
+  gigaDisplay.drawCircle(gigaDisplay.width() / 2, gigaDisplay.height() / 2, 100, GRIGIO_CHIARO);
 
   // Draw static labels for Debugging
   gigaDisplay.setTextSize(2);
