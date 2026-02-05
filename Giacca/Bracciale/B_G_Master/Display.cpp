@@ -12,8 +12,6 @@
 #define GRIGIO_CHIARO 0x6666
 #define GRIGIO_SCURO 0x4444
 
-
-
 // Definizioni dei pulsanti (posizione, dimensione, etichetta)
 namespace
 {
@@ -34,7 +32,7 @@ namespace
     const int NUM_BUTTONS = sizeof(buttons) / sizeof(Button);
 }
 
-Display::Display() : _lastStatusMessage(""), _lastTempDisplayed(-999.0), _lastHumDisplayed(-999.0), _lastStateColor(0), _buttonPressed(false) {}
+Display::Display() : _lastStatusMessage(""), _lastTempDisplayed(-999.0), _lastHumDisplayed(-999.0), _lastPressDisplayed(-999.0), _lastStateColor(0), _buttonPressed(false) {}
 
 void Display::begin()
 {
@@ -49,7 +47,7 @@ void Display::showBaseScreen()
     gigaDisplay.fillScreen(NERO);
     gigaDisplay.setTextColor(BIANCO);
     gigaDisplay.setTextSize(4);
-    gigaDisplay.setCursor(300, 30); // Centrato (800px)
+    gigaDisplay.setCursor(280, 30); // Centrato (800px)
     gigaDisplay.println("Kicco972.net");
 
     gigaDisplay.setTextSize(2);
@@ -79,6 +77,27 @@ void Display::setButtonLabel(ButtonId id, const char *label)
         if (buttons[i].id == id)
         {
             buttons[i].label = label;
+            break;
+        }
+    }
+}
+
+void Display::updateLedButton(bool isOn)
+{
+    for (int i = 0; i < NUM_BUTTONS; ++i)
+    {
+        if (buttons[i].id == BUTTON_LED)
+        {
+            uint16_t color = isOn ? GIALLO : NERO;
+            uint16_t textColor = isOn ? NERO : BIANCO;
+
+            gigaDisplay.fillRect(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, color);
+            gigaDisplay.drawRect(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, BIANCO);
+
+            gigaDisplay.setTextColor(textColor);
+            gigaDisplay.setTextSize(3);
+            gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 30);
+            gigaDisplay.print(buttons[i].label);
             break;
         }
     }
@@ -237,9 +256,28 @@ void Display::updateHumidity(float hum)
         gigaDisplay.setTextColor(CIANO);
         gigaDisplay.setTextSize(4);
         gigaDisplay.setCursor(260, 200);
-        gigaDisplay.print("Hum:  ");
+        gigaDisplay.print("Hum : ");
         gigaDisplay.print(hum, 1);
         gigaDisplay.print(" %");
+    }
+}
+
+void Display::updatePressure(float press)
+{
+    // Aggiorna solo se cambia significativamente (0.1 kPa)
+    if (abs(press - _lastPressDisplayed) > 0.1)
+    {
+        _lastPressDisplayed = press;
+
+        // Area Pressione (sotto l'umidità)
+        gigaDisplay.fillRect(200, 250, 400, 50, NERO); // Centrato, Y=250
+
+        gigaDisplay.setTextColor(MAGENTA); // Colore diverso per distinguere
+        gigaDisplay.setTextSize(4);
+        gigaDisplay.setCursor(260, 260);
+        gigaDisplay.print("Pres: ");
+        gigaDisplay.print(press, 1);
+        gigaDisplay.print(" kPa");
     }
 }
 

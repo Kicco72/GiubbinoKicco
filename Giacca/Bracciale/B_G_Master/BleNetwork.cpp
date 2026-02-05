@@ -8,6 +8,7 @@ BleNetwork::BleNetwork()
     _iotConnected = false;
     _lastTemperature = 0.0;
     _lastHumidity = 0.0;
+    _lastPressure = 0.0;
     _actuatorState = false;
 
     // Inizializziamo la nostra flag di scansione a false
@@ -17,6 +18,7 @@ BleNetwork::BleNetwork()
     _uuidSenseService = "181A";
     _uuidSenseCharTemp = "2A6E";
     _uuidSenseCharHum = "2A6F";
+    _uuidSenseCharPress = "2A6D";
 
     _uuidIoTService = "19B10000-E8F2-537E-4F6C-D104768A1214";
     _uuidIoTCharSwitch = "19B10001-E8F2-537E-4F6C-D104768A1214";
@@ -182,6 +184,12 @@ bool BleNetwork::connectToSense(BLEDevice p)
         hChar.subscribe();
     }
 
+    BLECharacteristic pChar = p.characteristic(_uuidSenseCharPress);
+    if (pChar && pChar.canSubscribe())
+    {
+        pChar.subscribe();
+    }
+
     _senseDevice = p;
     return true;
 }
@@ -208,6 +216,7 @@ void BleNetwork::pollSense()
 {
     BLECharacteristic tChar = _senseDevice.characteristic(_uuidSenseCharTemp);
     BLECharacteristic hChar = _senseDevice.characteristic(_uuidSenseCharHum);
+    BLECharacteristic pChar = _senseDevice.characteristic(_uuidSenseCharPress);
 
     if (tChar && tChar.valueUpdated())
     {
@@ -229,6 +238,17 @@ void BleNetwork::pollSense()
         Serial.print("Dati: Umidità aggiornata -> ");
         Serial.print(_lastHumidity);
         Serial.println(" %");
+    }
+
+    if (pChar && pChar.valueUpdated())
+    {
+        float press = 0.0;
+        pChar.readValue(&press, sizeof(press));
+
+        _lastPressure = press;
+        Serial.print("Dati: Pressione aggiornata -> ");
+        Serial.print(_lastPressure);
+        Serial.println(" kPa");
     }
 }
 
@@ -260,6 +280,11 @@ float BleNetwork::getLatestHumidity()
     return _lastHumidity;
 }
 
+float BleNetwork::getLatestPressure()
+{
+    return _lastPressure;
+}
+
 void BleNetwork::toggleActuator()
 {
     _actuatorState = !_actuatorState;
@@ -267,6 +292,11 @@ void BleNetwork::toggleActuator()
 
     Serial.print("Azione: Comando interruttore inviato -> ");
     Serial.println(_actuatorState ? "ON" : "OFF");
+}
+
+bool BleNetwork::getActuatorState()
+{
+    return _actuatorState;
 }
 
 bool BleNetwork::isSenseConnected() { return _senseConnected; }

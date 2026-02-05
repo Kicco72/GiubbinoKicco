@@ -23,10 +23,12 @@ public:
     ButtonId checkTouch();
     void drawButtons(); // Metodo reso pubblico per ridisegnare i pulsanti in altre schermate
     void setButtonLabel(ButtonId id, const char* label); // Nuovo metodo per cambiare etichetta
+    void updateLedButton(bool isOn); // Aggiorna il colore del pulsante LED
     
     void updateStatus(bool isScanning, bool isSenseConnected, bool isIoTConnected);
     void updateTemperature(float temp);
     void updateHumidity(float hum);
+    void updatePressure(float press);
     
     void updateStateIcon(uint16_t color); // Disegna il LED virtuale
     void resetStateIcon(); // Forza il ridisegno (utile al cambio schermata)
@@ -36,6 +38,7 @@ private:
     String _lastStatusMessage;
     float _lastTempDisplayed;
     float _lastHumDisplayed;
+    float _lastPressDisplayed;
     uint16_t _lastStateColor;
     bool _buttonPressed; // Flag per gestire il debounce senza bloccare
 };

@@ -87,6 +87,7 @@ void loop()
       // Torna alla base: Ripristina tasto "IMU"
       display.setButtonLabel(Display::BUTTON_IMU, "IMU");
       display.showBaseScreen(); // Ripristina schermata base
+      display.updateLedButton(myNetwork.getActuatorState()); // Ripristina stato colore LED
       // showBaseScreen chiama già resetStateIcon internamente o possiamo chiamarlo qui
     }
     break;
@@ -94,6 +95,7 @@ void loop()
   case Display::BUTTON_LED:
     Serial.println("Pulsante 'LED' premuto!");
     myNetwork.toggleActuator();
+    display.updateLedButton(myNetwork.getActuatorState()); // Aggiorna colore pulsante
     break;
 
   case Display::NONE:
@@ -120,6 +122,7 @@ void loop()
     {
       display.updateTemperature(myNetwork.getLatestTemperature());
       display.updateHumidity(myNetwork.getLatestHumidity());
+      display.updatePressure(myNetwork.getLatestPressure());
     }
   }
 
