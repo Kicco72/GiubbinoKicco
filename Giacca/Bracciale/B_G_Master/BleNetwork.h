@@ -28,6 +28,7 @@ class BleNetwork {
     float getLatestTemperature();
     float getLatestHumidity();
     float getLatestPressure();
+    void getLatestMag(float& x, float& y, float& z); // Restituisce i 3 valori
     void toggleActuator();
     bool getActuatorState(); // Restituisce lo stato dell'attuatore
 
@@ -49,6 +50,7 @@ class BleNetwork {
     float _lastTemperature;
     float _lastHumidity;
     float _lastPressure;
+    float _magX, _magY, _magZ;
     bool _actuatorState;
     unsigned long _lastPollTime; // Per temporizzare la lettura
 
@@ -57,6 +59,7 @@ class BleNetwork {
     const char* _uuidSenseCharTemp;
     const char* _uuidSenseCharHum;
     const char* _uuidSenseCharPress;
+    const char* _uuidSenseCharMag;
     const char* _uuidIoTService;
     const char* _uuidIoTCharSwitch;
 

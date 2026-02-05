@@ -9,6 +9,9 @@ BleNetwork::BleNetwork()
     _lastTemperature = 0.0;
     _lastHumidity = 0.0;
     _lastPressure = 0.0;
+    _magX = 0;
+    _magY = 0;
+    _magZ = 0;
     _actuatorState = false;
 
     // Inizializziamo la nostra flag di scansione a false
@@ -19,6 +22,7 @@ BleNetwork::BleNetwork()
     _uuidSenseCharTemp = "2A6E";
     _uuidSenseCharHum = "2A6F";
     _uuidSenseCharPress = "2A6D";
+    _uuidSenseCharMag = "2AA1";
 
     _uuidIoTService = "19B10000-E8F2-537E-4F6C-D104768A1214";
     _uuidIoTCharSwitch = "19B10001-E8F2-537E-4F6C-D104768A1214";
@@ -190,6 +194,12 @@ bool BleNetwork::connectToSense(BLEDevice p)
         pChar.subscribe();
     }
 
+    BLECharacteristic mChar = p.characteristic(_uuidSenseCharMag);
+    if (mChar && mChar.canSubscribe())
+    {
+        mChar.subscribe();
+    }
+
     _senseDevice = p;
     return true;
 }
@@ -217,6 +227,7 @@ void BleNetwork::pollSense()
     BLECharacteristic tChar = _senseDevice.characteristic(_uuidSenseCharTemp);
     BLECharacteristic hChar = _senseDevice.characteristic(_uuidSenseCharHum);
     BLECharacteristic pChar = _senseDevice.characteristic(_uuidSenseCharPress);
+    BLECharacteristic mChar = _senseDevice.characteristic(_uuidSenseCharMag);
 
     if (tChar && tChar.valueUpdated())
     {
@@ -249,6 +260,16 @@ void BleNetwork::pollSense()
         Serial.print("Dati: Pressione aggiornata -> ");
         Serial.print(_lastPressure);
         Serial.println(" kPa");
+    }
+
+    if (mChar && mChar.valueUpdated())
+    {
+        float data[3];
+        mChar.readValue(data, 12);
+        _magX = data[0];
+        _magY = data[1];
+        _magZ = data[2];
+        // Serial.println("Mag aggiornato");
     }
 }
 
@@ -283,6 +304,13 @@ float BleNetwork::getLatestHumidity()
 float BleNetwork::getLatestPressure()
 {
     return _lastPressure;
+}
+
+void BleNetwork::getLatestMag(float &x, float &y, float &z)
+{
+    x = _magX;
+    y = _magY;
+    z = _magZ;
 }
 
 void BleNetwork::toggleActuator()

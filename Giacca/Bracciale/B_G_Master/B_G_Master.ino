@@ -9,6 +9,7 @@
 #include "Display.h"
 #include "BleNetwork.h"
 #include "Imu3DVisualizer.h"
+#include "Bussola.h" // Includi la nuova classe
 #include "Stato.h" // Includi la nuova gestione stati
 #include <Arduino_GigaDisplayTouch.h>
 #include <Arduino_GigaDisplay_GFX.h>
@@ -21,10 +22,12 @@ GigaDisplayRGB rgb; // RGB Oggetto
 Display display;
 BleNetwork myNetwork;
 Imu3DVisualizer imuViz;
+Bussola bussolaViz; // Oggetto Bussola
 Stato gestioneStato; // Oggetto per gestire il LED
 
 // Variabile di stato per la modalità di visualizzazione
 bool imuMode = false;
+bool bussolaMode = false; // Flag per modalità bussola
 bool imuOk = false; // Flag per tracciare lo stato dell'hardware IMU
 
 void setup()
@@ -71,6 +74,7 @@ void loop()
 
   case Display::BUTTON_IMU:
     Serial.println("Pulsante 'IMU' premuto!");
+    if (bussolaMode) break; // Ignora se siamo in bussola (o gestisci uscita)
     imuMode = !imuMode; // Alterna la modalità
 
     if (imuMode)
@@ -89,6 +93,24 @@ void loop()
       display.showBaseScreen(); // Ripristina schermata base
       display.updateLedButton(myNetwork.getActuatorState()); // Ripristina stato colore LED
       // showBaseScreen chiama già resetStateIcon internamente o possiamo chiamarlo qui
+    }
+    break;
+
+  case Display::BUTTON_BUSSOLA:
+    Serial.println("Pulsante 'Bussola' premuto!");
+    if (imuMode) break; // Ignora se siamo in IMU
+    bussolaMode = !bussolaMode;
+
+    if (bussolaMode) {
+        display.setButtonLabel(Display::BUTTON_BUSSOLA, "Indietro");
+        gigaDisplay.fillScreen(0x0000);
+        bussolaViz.drawBackground();
+        display.drawButtons(); // Disegna i pulsanti DOPO lo sfondo per assicurarne la visibilità
+        display.resetStateIcon();
+    } else {
+        display.setButtonLabel(Display::BUTTON_BUSSOLA, "Bussola");
+        display.showBaseScreen();
+        display.updateLedButton(myNetwork.getActuatorState());
     }
     break;
 
@@ -111,6 +133,13 @@ void loop()
   {
     // --- MODALITÀ IMU ---
     imuViz.updateAndDraw();
+  }
+  else if (bussolaMode)
+  {
+    // --- MODALITÀ BUSSOLA ---
+    float mx, my, mz;
+    myNetwork.getLatestMag(mx, my, mz);
+    bussolaViz.updateAndDraw(mx, my, mz);
   }
   else
   {

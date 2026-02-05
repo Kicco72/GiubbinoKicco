@@ -26,9 +26,10 @@ namespace
     // Layout Landscape (800x480)
     // Pulsanti in basso (Y=380), Centrati orizzontalmente
     Button buttons[] = {
-        {Display::BUTTON_SCAN, 150, 380, 140, 80, "Scan"},
-        {Display::BUTTON_IMU, 330, 380, 140, 80, "IMU"},
-        {Display::BUTTON_LED, 510, 380, 140, 80, "LED"}};
+        {Display::BUTTON_SCAN, 25, 380, 140, 80, "Scan"},
+        {Display::BUTTON_IMU, 215, 380, 140, 80, "IMU"},
+        {Display::BUTTON_BUSSOLA, 405, 380, 140, 80, "Bussola"},
+        {Display::BUTTON_LED, 595, 380, 140, 80, "LED"}};
     const int NUM_BUTTONS = sizeof(buttons) / sizeof(Button);
 }
 
@@ -47,7 +48,7 @@ void Display::showBaseScreen()
     gigaDisplay.fillScreen(NERO);
     gigaDisplay.setTextColor(BIANCO);
     gigaDisplay.setTextSize(4);
-    gigaDisplay.setCursor(280, 30); // Centrato (800px)
+    gigaDisplay.setCursor(300, 30); // Centrato (800px)
     gigaDisplay.println("Kicco972.net");
 
     gigaDisplay.setTextSize(2);
@@ -256,7 +257,7 @@ void Display::updateHumidity(float hum)
         gigaDisplay.setTextColor(CIANO);
         gigaDisplay.setTextSize(4);
         gigaDisplay.setCursor(260, 200);
-        gigaDisplay.print("Hum : ");
+        gigaDisplay.print("Hum:  ");
         gigaDisplay.print(hum, 1);
         gigaDisplay.print(" %");
     }

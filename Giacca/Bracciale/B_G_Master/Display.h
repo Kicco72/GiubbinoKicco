@@ -14,7 +14,8 @@ public:
         NONE,
         BUTTON_SCAN,
         BUTTON_IMU, // Modificato da STATUS a IMU
-        BUTTON_LED // Nuovo pulsante per il LED
+        BUTTON_BUSSOLA, // Nuovo pulsante Bussola
+        BUTTON_LED
     };
 
     Display();
