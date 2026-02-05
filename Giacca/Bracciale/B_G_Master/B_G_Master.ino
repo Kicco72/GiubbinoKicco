@@ -5,6 +5,7 @@
 // Google Gemini Pro
 
 // Includi i moduli del progetto
+#include "mbed.h" // Mbed OS
 #include "Display.h"
 #include "BleNetwork.h"
 #include "Imu3DVisualizer.h"
@@ -12,9 +13,9 @@
 #include <Arduino_GigaDisplayTouch.h>
 #include <Arduino_GigaDisplay_GFX.h>
 
-
 // Oggetto Display Globale (condiviso tra Display.cpp e Imu3DVisualizer.cpp)
 GigaDisplay_GFX gigaDisplay;
+GigaDisplayRGB rgb; // RGB Oggetto
 
 // Crea gli oggetti globali per i moduli
 Display display;
@@ -36,14 +37,16 @@ void setup()
   // Inizializza i moduli
   display.begin();
   myNetwork.begin();
-  gestioneStato.begin(); // Avvia gestione LED
+  gestioneStato.begin(rgb); // Avvia gestione LED passando l'oggetto RGB del display
 
   // Inizializza IMU
   if (!imuViz.begin())
   {
     Serial.println("Errore inizializzazione IMU!");
     imuOk = false;
-  } else {
+  }
+  else
+  {
     imuOk = true;
   }
 
@@ -128,7 +131,7 @@ void loop()
   }
 
   // 7. Gestione Stato Sistema (LED RGB) con criteri aggiornati
-  
+
   // Recupera temperatura corrente
   float temp = myNetwork.getLatestTemperature();
   // Definisci soglie di allarme (es. sotto 10°C o sopra 30°C)
@@ -136,25 +139,25 @@ void loop()
 
   uint16_t coloreStato = VERDE; // Default
 
-  if (!imuOk || !myNetwork.isSenseConnected() || !myNetwork.isIoTConnected()) 
+  if (!imuOk || !myNetwork.isSenseConnected() || !myNetwork.isIoTConnected())
   {
     // Se qualcosa non funziona o non è connesso -> Rosso (Pericolo)
     gestioneStato.imposta(Stato::PERICOLO);
     coloreStato = ROSSO;
   }
-  else if (allarmeTemp) 
+  else if (allarmeTemp)
   {
     // Tutto connesso ma temperatura fuori range -> Giallo (Attenzione)
     gestioneStato.imposta(Stato::ATTENZIONE);
     coloreStato = GIALLO;
   }
-  else 
+  else
   {
     // Tutto funziona e temperatura OK -> Verde (Normale)
     gestioneStato.imposta(Stato::NORMALE);
     coloreStato = VERDE;
   }
-  
+
   // Aggiorna l'icona sul display (LED Virtuale)
   display.updateStateIcon(coloreStato);
 

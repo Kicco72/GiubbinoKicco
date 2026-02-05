@@ -9,6 +9,10 @@
 #define BIANCO 0xffff
 #define NERO 0x0000
 #define GIALLO 0xFFE0
+#define GRIGIO_CHIARO 0x6666
+#define GRIGIO_SCURO 0x4444
+
+
 
 // Definizioni dei pulsanti (posizione, dimensione, etichetta)
 namespace
@@ -30,7 +34,7 @@ namespace
     const int NUM_BUTTONS = sizeof(buttons) / sizeof(Button);
 }
 
-Display::Display() : _lastStatusMessage(""), _lastTempDisplayed(-999.0), _lastHumDisplayed(-999.0), _lastStateColor(0) {}
+Display::Display() : _lastStatusMessage(""), _lastTempDisplayed(-999.0), _lastHumDisplayed(-999.0), _lastStateColor(0), _buttonPressed(false) {}
 
 void Display::begin()
 {
@@ -88,6 +92,10 @@ Display::ButtonId Display::checkTouch()
     // Controlla se lo schermo è stato premuto
     if (contacts > 0)
     {
+        // Se stiamo già gestendo una pressione (utente tiene premuto), usciamo subito per non bloccare
+        if (_buttonPressed)
+            return Display::NONE;
+
         // Recupera coordinate native (Portrait)
         uint16_t rawX = points[0].x;
         uint16_t rawY = points[0].y;
@@ -131,15 +139,16 @@ Display::ButtonId Display::checkTouch()
                 gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 30);
                 gigaDisplay.print(buttons[i].label);
 
-                // Attendi il rilascio del touch per evitare trigger multipli (debounce)
-                while (_touchDetector.getTouchPoints(points) > 0)
-                {
-                    delay(50);
-                }
-
+                // Segnala che il pulsante è stato premuto e attendiamo il rilascio (gestito nel prossimo ciclo)
+                _buttonPressed = true;
                 return buttons[i].id; // Ritorna l'ID del pulsante premuto
             }
         }
+    }
+    else
+    {
+        // Nessun contatto: l'utente ha sollevato il dito, resettiamo il flag
+        _buttonPressed = false;
     }
 
     return Display::NONE; // Nessun pulsante premuto

@@ -37,6 +37,7 @@ private:
     float _lastTempDisplayed;
     float _lastHumDisplayed;
     uint16_t _lastStateColor;
+    bool _buttonPressed; // Flag per gestire il debounce senza bloccare
 };
 
 #endif

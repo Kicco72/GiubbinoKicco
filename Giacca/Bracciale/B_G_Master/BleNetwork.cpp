@@ -130,7 +130,9 @@ void BleNetwork::scanAndConnect()
             }
 
             // Riavvia usando il metodo della classe
-            startScan();
+            // Riavvia la scansione SOLO se l'altro dispositivo (IoT) non è ancora connesso
+            if (!_iotConnected)
+                startScan();
         }
         // Caso B: NanoIoT
         else if (peripheral.localName() == "NanoIoT" && !_iotConnected)
@@ -147,7 +149,9 @@ void BleNetwork::scanAndConnect()
                 Serial.println(">> Errore: Connessione a IoT fallita");
             }
 
-            startScan(); // Usa il metodo interno
+            // Riavvia la scansione SOLO se l'altro dispositivo (Sense) non è ancora connesso
+            if (!_senseConnected)
+                startScan();
         }
     }
 }
@@ -167,12 +171,14 @@ bool BleNetwork::connectToSense(BLEDevice p)
 
     // Sottoscrizione alle caratteristiche per ricevere le notifiche
     BLECharacteristic tChar = p.characteristic(_uuidSenseCharTemp);
-    if (tChar && tChar.canSubscribe()) {
+    if (tChar && tChar.canSubscribe())
+    {
         tChar.subscribe();
     }
 
     BLECharacteristic hChar = p.characteristic(_uuidSenseCharHum);
-    if (hChar && hChar.canSubscribe()) {
+    if (hChar && hChar.canSubscribe())
+    {
         hChar.subscribe();
     }
 

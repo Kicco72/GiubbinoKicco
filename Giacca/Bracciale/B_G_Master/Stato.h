@@ -2,6 +2,7 @@
 #define STATO_H
 
 #include <Arduino.h>
+#include <Arduino_GigaDisplay.h> // Necessario per GigaDisplayRGB
 
 class Stato {
 public:
@@ -12,11 +13,12 @@ public:
     };
 
     Stato();
-    void begin();
+    void begin(GigaDisplayRGB& rgb); // Modificato per accettare l'oggetto RGB
     void imposta(Livello l);
     
 private:
     Livello _livelloCorrente;
+    GigaDisplayRGB* _rgb; // Puntatore all'oggetto RGB del display
     void aggiornaLed();
 };
 

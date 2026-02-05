@@ -8,10 +8,10 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": ".",
-      "program": "build/Debug/outDebug",
+      "cwd": "c:/Users/franc/Documents/Arduino/GiubbinoKicco/Giacca/Bracciale/B_G_Master",
+      "program": "c:/Users/franc/Documents/Arduino/GiubbinoKicco/Giacca/Bracciale/B_G_Master/build/Debug/outDebug",
       "MIMode": "gdb",
-      "miDebuggerPath": "C:\\Users\\franc\\AppData\\Local\\Arduino15\\packages\\arduino\\tools\\arm-none-eabi-gdb\\7-2017q4\\bin\\arm-none-eabi-g++",
+      "miDebuggerPath": "C:/Users/franc/AppData/Local/Arduino15/packages/arduino/tools/arm-none-eabi-gdb/7-2017q4/bin/arm-none-eabi-g++",
       "setupCommands": [
         {
           "description": "Enable pretty-printing for gdb",
