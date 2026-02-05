@@ -47,7 +47,7 @@ void Display::showBaseScreen()
 {
     gigaDisplay.fillScreen(NERO);
     gigaDisplay.setTextColor(BIANCO);
-    gigaDisplay.setTextSize(4);
+    gigaDisplay.setTextSize(3);
     gigaDisplay.setCursor(300, 30); // Centrato (800px)
     gigaDisplay.println("Kicco972.net");
 
@@ -57,6 +57,12 @@ void Display::showBaseScreen()
 
     drawButtons();
     resetStateIcon(); // Forza il ridisegno dell'icona di stato
+
+    // Resetta la cache dei valori per forzare l'aggiornamento immediato dei dati
+    _lastTempDisplayed = -999.0;
+    _lastHumDisplayed = -999.0;
+    _lastPressDisplayed = -999.0;
+    _lastStatusMessage = ""; 
 }
 
 void Display::drawButtons()
@@ -64,7 +70,7 @@ void Display::drawButtons()
     for (int i = 0; i < NUM_BUTTONS; ++i)
     {
         gigaDisplay.drawRect(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, BIANCO);
-        gigaDisplay.setTextSize(3);
+        gigaDisplay.setTextSize(2);
         // Centra l'etichetta nel pulsante (approssimato)
         gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 30);
         gigaDisplay.print(buttons[i].label);
@@ -96,7 +102,7 @@ void Display::updateLedButton(bool isOn)
             gigaDisplay.drawRect(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, BIANCO);
 
             gigaDisplay.setTextColor(textColor);
-            gigaDisplay.setTextSize(3);
+            gigaDisplay.setTextSize(2);
             gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 30);
             gigaDisplay.print(buttons[i].label);
             break;
@@ -147,6 +153,7 @@ Display::ButtonId Display::checkTouch()
                 // Trovato! Aggiungiamo un feedback visivo.
                 gigaDisplay.fillRect(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, BIANCO);
                 gigaDisplay.setTextColor(NERO);
+                gigaDisplay.setTextSize(2);
                 gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 30);
                 gigaDisplay.print(buttons[i].label);
 
@@ -156,6 +163,7 @@ Display::ButtonId Display::checkTouch()
                 gigaDisplay.fillRect(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, NERO); // Pulisci lo sfondo bianco
                 gigaDisplay.drawRect(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, BIANCO);
                 gigaDisplay.setTextColor(BIANCO);
+                gigaDisplay.setTextSize(2);
                 gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 30);
                 gigaDisplay.print(buttons[i].label);
 
@@ -236,7 +244,7 @@ void Display::updateTemperature(float temp)
         gigaDisplay.fillRect(200, 130, 400, 50, NERO); // Centrato
 
         gigaDisplay.setTextColor(VERDE);
-        gigaDisplay.setTextSize(4);
+        gigaDisplay.setTextSize(3);
         gigaDisplay.setCursor(260, 140);
         gigaDisplay.print("Temp: ");
         gigaDisplay.print(temp, 1);
@@ -255,7 +263,7 @@ void Display::updateHumidity(float hum)
         gigaDisplay.fillRect(200, 190, 400, 50, NERO); // Centrato, Y=190
 
         gigaDisplay.setTextColor(CIANO);
-        gigaDisplay.setTextSize(4);
+        gigaDisplay.setTextSize(3);
         gigaDisplay.setCursor(260, 200);
         gigaDisplay.print("Hum:  ");
         gigaDisplay.print(hum, 1);
@@ -274,7 +282,7 @@ void Display::updatePressure(float press)
         gigaDisplay.fillRect(200, 250, 400, 50, NERO); // Centrato, Y=250
 
         gigaDisplay.setTextColor(MAGENTA); // Colore diverso per distinguere
-        gigaDisplay.setTextSize(4);
+        gigaDisplay.setTextSize(3);
         gigaDisplay.setCursor(260, 260);
         gigaDisplay.print("Pres: ");
         gigaDisplay.print(press, 1);

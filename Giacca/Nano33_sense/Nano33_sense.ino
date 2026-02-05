@@ -1,5 +1,6 @@
 /*
   Nano33_sense.ino
+  Progetto Bracciale - Periferica Sense
   Codice per Arduino Nano 33 BLE Sense
   Funzione: Periferica BLE che invia la temperatura al Master
 */
@@ -23,7 +24,8 @@ BLEFloatCharacteristic pressCharacteristic("2A6D", BLERead | BLENotify);
 // Usiamo una caratteristica generica di 12 byte (3 float x 4 byte)
 BLECharacteristic magCharacteristic("2AA1", BLERead | BLENotify, 12);
 
-long previousMillis = 0;
+long previousEnvMillis = 0; // Timer per dati ambientali (lenti)
+long previousMagMillis = 0; // Timer per magnetometro (veloce)
 
 void setup()
 {
@@ -96,18 +98,14 @@ void loop()
     {
       long currentMillis = millis();
 
-      // Leggi e invia la temperatura ogni 2 secondi
-      if (currentMillis - previousMillis >= 2000)
+      // 1. Dati Ambientali: Aggiornamento lento (ogni 2 secondi)
+      if (currentMillis - previousEnvMillis >= 2000)
       {
-        previousMillis = currentMillis;
+        previousEnvMillis = currentMillis;
 
         float temperature = HS300x.readTemperature(); // °C
         float humidity = HS300x.readHumidity();       // %
         float pressure = BARO.readPressure();
-
-        float x, y, z;
-        // Leggi campo magnetico in uT
-        IMU.readMagneticField(x, y, z);
 
         Serial.print("Temperatura inviata: ");
         Serial.print(temperature);
@@ -121,15 +119,18 @@ void loop()
         Serial.print(pressure);
         Serial.println(" kPa");
 
-        Serial.print("Mag: ");
-        Serial.print(x);
-        Serial.print(", ");
-        Serial.print(y);
-        Serial.println();
-
         tempCharacteristic.writeValue(temperature);
         humCharacteristic.writeValue(humidity);
         pressCharacteristic.writeValue(pressure);
+      }
+
+      // 2. Magnetometro: Aggiornamento veloce (ogni 100ms = 10Hz)
+      if (currentMillis - previousMagMillis >= 100)
+      {
+        previousMagMillis = currentMillis;
+
+        float x, y, z;
+        IMU.readMagneticField(x, y, z);
 
         // Invia array di 3 float
         float magData[3];

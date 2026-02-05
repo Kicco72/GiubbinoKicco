@@ -45,12 +45,6 @@ private:
     // Timing for physics integration
     unsigned long lastUpdateMicros = 0;
 
-    // Previous coordinates (used for erasing)
-    int prevX_end_x = 0, prevX_end_y = 0;
-    int prevY_end_x = 0, prevY_end_y = 0;
-    int prevZ_end_x = 0, prevZ_end_y = 0;
-    bool firstDraw = true;
-
     Point3D rotatePoint(Point3D p, float pitch, float roll, float yaw);
     void readImuData();
     void drawSphere();

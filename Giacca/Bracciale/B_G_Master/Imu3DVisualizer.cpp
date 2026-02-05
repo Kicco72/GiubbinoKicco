@@ -49,7 +49,7 @@ void Imu3DVisualizer::drawBackground()
 {
   // Draw static reference circle
   // Spostiamo la sfera a destra (X=600) per lasciare spazio al testo a sinistra
-  gigaDisplay.drawCircle(600, 240, 100, GRIGIO_CHIARO);
+  // RIMOSSO: gigaDisplay.drawCircle(600, 240, 100, GRIGIO_CHIARO); // Ora disegniamo la sfera dinamica in drawSphere
 
   // Draw static labels for Debugging
   gigaDisplay.setTextSize(2);
@@ -83,9 +83,11 @@ void Imu3DVisualizer::readImuData()
 
     // Calculate Pitch and Roll
     // We use -9.81 reference or simply 1g.
-    // If the device is flat, z should be ~1.0 or ~0.98 depending on units.
-    roll = atan2(ay, az) * RAD_TO_DEG;
-    pitch = atan2(-ax, sqrt(ay * ay + az * az)) * RAD_TO_DEG;
+    // MODIFICA: L'orientamento ora è gestito dal giroscopio.
+    // L'accelerometro serve solo per il vettore intensità.
+    // Commentiamo il calcolo basato su accelerometro:
+    // roll = atan2(ay, az) * RAD_TO_DEG;
+    // pitch = atan2(-ax, sqrt(ay * ay + az * az)) * RAD_TO_DEG;
   }
   else
   {
@@ -106,7 +108,10 @@ void Imu3DVisualizer::readImuData()
     lastUpdateMicros = currentMicros;
 
     // Simple integration without deadzone to see if raw values exist
-    // If gz is constantly 0.00, we have a sensor config issue.
+    // Integrazione Giroscopio per orientamento (dps * secondi = gradi)
+    // Roll (X), Pitch (Y), Yaw (Z)
+    roll += gx * dt;
+    pitch += gy * dt;
     yaw += gz * dt;
   }
 }
@@ -141,14 +146,91 @@ void Imu3DVisualizer::drawSphere()
   int cy = 240; // Centro verticale (480/2)
   int r = 100;
 
+  // 1. Pulisci l'intera area della sfera per il nuovo frame
+  // Questo rimuove assi, vettori e la sfera precedente
+  gigaDisplay.fillCircle(cx, cy, r + 5, NERO);
+
+  // 2. Disegna Sfera Wireframe (3 Cerchi Ortogonali Rotanti)
+  uint16_t sphereColor = GRIGIO_SCURO;
+  float step = 15.0; // Risoluzione della sfera
+
+  for (int axis = 0; axis < 3; axis++)
+  {
+    float prev_x = 0, prev_y = 0;
+    bool first = true;
+    for (float a = 0; a <= 360; a += step)
+    {
+      float rad = a * DEG_TO_RAD;
+      float c = cos(rad) * r;
+      float s = sin(rad) * r;
+
+      Point3D p;
+      if (axis == 0)
+        p = {0, c, s}; // Piano YZ
+      else if (axis == 1)
+        p = {c, 0, s}; // Piano XZ
+      else
+        p = {c, s, 0}; // Piano XY
+
+      // Sfera fissa: Ruotata su asse X di ancora -10 gradi (Pitch -30, Roll -70, Yaw -60)
+      Point3D rot = rotatePoint(p, -30, -70, -60);
+      int sx = cx + (int)rot.x;
+      int sy = cy + (int)rot.y;
+
+      if (!first)
+        gigaDisplay.drawLine((int)prev_x, (int)prev_y, sx, sy, sphereColor);
+      prev_x = sx;
+      prev_y = sy;
+      first = false;
+    }
+  }
+
+  // --- Punti Cardinali Fissi (N = +X) ---
+  gigaDisplay.setTextColor(BIANCO);
+  gigaDisplay.setTextSize(2);
+
+  Point3D cardinalPoints[] = {
+      {(float)r, 0, 0},  // N (+X)
+      {-(float)r, 0, 0}, // S (-X)
+      {0, (float)r, 0},  // E (+Y)
+      {0, -(float)r, 0}  // W (-Y)
+  };
+  const char *cardinalLabels[] = {"N", "S", "E", "W"};
+
+  for (int i = 0; i < 4; i++)
+  {
+    // Stessa rotazione isometrica della sfera
+    Point3D rot = rotatePoint(cardinalPoints[i], -30, -70, -60);
+    int sx = cx + (int)rot.x;
+    int sy = cy + (int)rot.y;
+    gigaDisplay.setCursor(sx - 6, sy - 6);
+    gigaDisplay.print(cardinalLabels[i]);
+  }
+
   // --- 3D Rotation Logic ---
   Point3D xAxis = {(float)r, 0, 0};
   Point3D yAxis = {0, (float)r, 0};
   Point3D zAxis = {0, 0, (float)r};
 
-  Point3D xRot = rotatePoint(xAxis, pitch, roll, yaw);
-  Point3D yRot = rotatePoint(yAxis, pitch, roll, yaw);
-  Point3D zRot = rotatePoint(zAxis, pitch, roll, yaw);
+  // 1. Calcola orientamento assi IMU (Body -> World)
+  Point3D xBody = rotatePoint(xAxis, pitch, roll, yaw);
+  Point3D yBody = rotatePoint(yAxis, pitch, roll, yaw);
+  Point3D zBody = rotatePoint(zAxis, pitch, roll, yaw);
+
+  // 2. Applica la rotazione della vista fissa (World -> Screen)
+  // Angoli fissati: Pitch -30, Roll -70, Yaw -60
+  Point3D xRot = rotatePoint(xBody, -30, -70, -60);
+  Point3D yRot = rotatePoint(yBody, -30, -70, -60);
+  Point3D zRot = rotatePoint(zBody, -30, -70, -60);
+
+  // --- Acceleration Vector Logic ---
+  // Scaliamo il vettore accelerazione (1g = 100px raggio)
+  float accScale = 100.0;
+  Point3D accVec = {dbg_ax * accScale, dbg_ay * accScale, dbg_az * accScale};
+  
+  // Ruota vettore accelerazione (Body -> World -> Screen)
+  Point3D accWorld = rotatePoint(accVec, pitch, roll, yaw);
+  Point3D accRot = rotatePoint(accWorld, -30, -70, -60);
 
   int newXx = cx + (int)xRot.x;
   int newXy = cy + (int)xRot.y;
@@ -156,27 +238,29 @@ void Imu3DVisualizer::drawSphere()
   int newYy = cy + (int)yRot.y;
   int newZx = cx + (int)zRot.x;
   int newZy = cy + (int)zRot.y;
+  int newAccX = cx + (int)accRot.x;
+  int newAccY = cy + (int)accRot.y;
 
-  // Erase old lines
-  if (!firstDraw)
-  {
-    gigaDisplay.drawLine(cx, cy, prevX_end_x, prevX_end_y, NERO);
-    gigaDisplay.drawLine(cx, cy, prevY_end_x, prevY_end_y, NERO);
-    gigaDisplay.drawLine(cx, cy, prevZ_end_x, prevZ_end_y, NERO);
-  }
+  gigaDisplay.setTextSize(2);
 
   // Draw new lines
   gigaDisplay.drawLine(cx, cy, newXx, newXy, ROSSO);
-  gigaDisplay.drawLine(cx, cy, newYx, newYy, VERDE);
-  gigaDisplay.drawLine(cx, cy, newZx, newZy, BLE);
+  gigaDisplay.setTextColor(ROSSO);
+  gigaDisplay.setCursor(newXx, newXy);
+  gigaDisplay.print("X");
 
-  prevX_end_x = newXx;
-  prevX_end_y = newXy;
-  prevY_end_x = newYx;
-  prevY_end_y = newYy;
-  prevZ_end_x = newZx;
-  prevZ_end_y = newZy;
-  firstDraw = false;
+  gigaDisplay.drawLine(cx, cy, newYx, newYy, VERDE);
+  gigaDisplay.setTextColor(VERDE);
+  gigaDisplay.setCursor(newYx, newYy);
+  gigaDisplay.print("Y");
+
+  gigaDisplay.drawLine(cx, cy, newZx, newZy, BLE);
+  gigaDisplay.setTextColor(BLE);
+  gigaDisplay.setCursor(newZx, newZy);
+  gigaDisplay.print("Z");
+
+  // Disegna nuovo vettore accelerazione (Giallo)
+  gigaDisplay.drawLine(cx, cy, newAccX, newAccY, GIALLO);
 
   // --- DEBUG DASHBOARD (Update every 100ms) ---
   static unsigned long lastTxt = 0;
@@ -186,7 +270,8 @@ void Imu3DVisualizer::drawSphere()
 
     // Clear value areas
     // Riduciamo la larghezza per non cancellare la sfera
-    gigaDisplay.fillRect(120, 180, 250, 100, NERO);
+    // MODIFICA: Aumentata larghezza a 360 per evitare sovrapposizione testo
+    gigaDisplay.fillRect(120, 180, 360, 100, NERO);
 
     gigaDisplay.setTextSize(2);
 

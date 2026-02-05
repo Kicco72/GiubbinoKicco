@@ -15,11 +15,14 @@ public:
     Stato();
     void begin(GigaDisplayRGB& rgb); // Modificato per accettare l'oggetto RGB
     void imposta(Livello l);
+    void update();
     
 private:
     Livello _livelloCorrente;
     GigaDisplayRGB* _rgb; // Puntatore all'oggetto RGB del display
-    void aggiornaLed();
+    unsigned long _lastBlinkTime;
+    bool _ledOn;
+    void accendiLed();
 };
 
 #endif
