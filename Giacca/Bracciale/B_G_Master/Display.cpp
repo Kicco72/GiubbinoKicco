@@ -26,14 +26,20 @@ namespace
     // Layout Landscape (800x480)
     // Pulsanti in basso (Y=380), Centrati orizzontalmente
     Button buttons[] = {
-        {Display::BUTTON_SCAN, 25, 380, 140, 80, "Scan"},
-        {Display::BUTTON_IMU, 215, 380, 140, 80, "IMU"},
-        {Display::BUTTON_BUSSOLA, 405, 380, 140, 80, "Bussola"},
-        {Display::BUTTON_LED, 595, 380, 140, 80, "LED"}};
+        // Riga 1 (Y=330) - Pulsanti Principali
+        {Display::BUTTON_SCAN, 25, 330, 180, 60, "Scan"},
+        {Display::BUTTON_IMU, 215, 330, 180, 60, "IMU"},
+        {Display::BUTTON_BUSSOLA, 405, 330, 180, 60, "Bussola"},
+        {Display::BUTTON_LED, 595, 330, 180, 60, "LED"},
+        // Riga 2 (Y=400) - Pulsanti Extra
+        {Display::BUTTON_F1, 25, 400, 180, 60, "Memoria"},
+        {Display::BUTTON_F2, 215, 400, 180, 60, "F 2"},
+        {Display::BUTTON_F3, 405, 400, 180, 60, "F 3"},
+        {Display::BUTTON_F4, 595, 400, 180, 60, "F 4"}};
     const int NUM_BUTTONS = sizeof(buttons) / sizeof(Button);
 }
 
-Display::Display() : _lastStatusMessage(""), _lastTempDisplayed(-999.0), _lastHumDisplayed(-999.0), _lastPressDisplayed(-999.0), _lastStateColor(0), _buttonPressed(false), _lastWifiConnected(false), _lastIp(""), _lastRssi(-999) {}
+Display::Display() : _lastStatusMessage(""), _lastTempDisplayed(-999.0), _lastHumDisplayed(-999.0), _lastPressDisplayed(-999.0), _lastStateColor(0), _buttonPressed(false), _lastWifiConnected(false), _lastIp(""), _lastRssi(-999), _lastTimeDisplayed("") {}
 
 void Display::begin()
 {
@@ -45,14 +51,24 @@ void Display::begin()
 
 void Display::showBaseScreen()
 {
+    // Ripristina le etichette della schermata base
+    setButtonLabel(BUTTON_SCAN, "Scan");
+    setButtonLabel(BUTTON_IMU, "IMU");
+    setButtonLabel(BUTTON_BUSSOLA, "Bussola");
+    setButtonLabel(BUTTON_LED, "LED");
+    setButtonLabel(BUTTON_F1, "Memoria");
+    setButtonLabel(BUTTON_F2, "F 2");
+    setButtonLabel(BUTTON_F3, "F 3");
+    setButtonLabel(BUTTON_F4, "F 4");
+
     gigaDisplay.fillScreen(NERO);
     gigaDisplay.setTextColor(BIANCO);
     gigaDisplay.setTextSize(3);
-    gigaDisplay.setCursor(300, 30); // Centrato (800px)
+    gigaDisplay.setCursor(300, 10); // Spostato in alto (era 30)
     gigaDisplay.println("Kicco972.net");
 
     gigaDisplay.setTextSize(2);
-    gigaDisplay.setCursor(320, 80);
+    gigaDisplay.setCursor(320, 40); // Spostato in alto (era 80)
     gigaDisplay.println("Sistema Attivo");
 
     drawButtons();
@@ -66,6 +82,25 @@ void Display::showBaseScreen()
     _lastWifiConnected = false;
     _lastIp = "";
     _lastRssi = -999;
+    _lastTimeDisplayed = "";
+}
+
+void Display::prepareSubScreen()
+{
+    gigaDisplay.fillScreen(NERO);
+    
+    // Configurazione standard pulsanti sottomaschera
+    setButtonLabel(BUTTON_SCAN, "Indietro"); // Il primo pulsante è sempre Indietro
+    setButtonLabel(BUTTON_IMU, "");      // Disponibile
+    setButtonLabel(BUTTON_BUSSOLA, "");  // Disponibile
+    setButtonLabel(BUTTON_LED, "");      // Disponibile
+    setButtonLabel(BUTTON_F1, "");       // Disponibile
+    setButtonLabel(BUTTON_F2, "");       // Disponibile
+    setButtonLabel(BUTTON_F3, "");       // Disponibile
+    setButtonLabel(BUTTON_F4, "");       // Disponibile
+
+    drawButtons();
+    resetStateIcon();
 }
 
 void Display::drawButtons()
@@ -75,7 +110,7 @@ void Display::drawButtons()
         gigaDisplay.drawRect(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, BIANCO);
         gigaDisplay.setTextSize(2);
         // Centra l'etichetta nel pulsante (approssimato)
-        gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 30);
+        gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 20); // Aggiustato per altezza 60
         gigaDisplay.print(buttons[i].label);
     }
 }
@@ -106,7 +141,7 @@ void Display::updateLedButton(bool isOn)
 
             gigaDisplay.setTextColor(textColor);
             gigaDisplay.setTextSize(2);
-            gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 30);
+            gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 20);
             gigaDisplay.print(buttons[i].label);
             break;
         }
@@ -157,7 +192,7 @@ Display::ButtonId Display::checkTouch()
                 gigaDisplay.fillRect(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, BIANCO);
                 gigaDisplay.setTextColor(NERO);
                 gigaDisplay.setTextSize(2);
-                gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 30);
+                gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 20);
                 gigaDisplay.print(buttons[i].label);
 
                 delay(150); // Breve ritardo per mostrare l'effetto e per debounce
@@ -167,7 +202,7 @@ Display::ButtonId Display::checkTouch()
                 gigaDisplay.drawRect(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, BIANCO);
                 gigaDisplay.setTextColor(BIANCO);
                 gigaDisplay.setTextSize(2);
-                gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 30);
+                gigaDisplay.setCursor(buttons[i].x + 20, buttons[i].y + 20);
                 gigaDisplay.print(buttons[i].label);
 
                 // Segnala che il pulsante è stato premuto e attendiamo il rilascio (gestito nel prossimo ciclo)
@@ -218,7 +253,7 @@ void Display::updateStatus(bool isScanning, bool isSenseConnected, bool isIoTCon
     {
         // Definisce l'area in cui disegnare lo stato
         const int STATUS_X = 420; // Centro-Destra (evita sovrapposizione con Temp che finisce a 420)
-        const int STATUS_Y = 130; // Stessa altezza di Temp (Y=130)
+        const int STATUS_Y = 80; // Spostato in alto (era 130)
         const int STATUS_W = 380; // Spazio rimanente (800 - 420)
         const int STATUS_H = 50;  // Stessa altezza del box Temp
 
@@ -228,7 +263,7 @@ void Display::updateStatus(bool isScanning, bool isSenseConnected, bool isIoTCon
         // Scrivi il nuovo messaggio
         gigaDisplay.setTextColor(BIANCO);
         gigaDisplay.setTextSize(3);
-        gigaDisplay.setCursor(STATUS_X, STATUS_Y + 10); // Y=140, allineato con testo Temp
+        gigaDisplay.setCursor(STATUS_X, STATUS_Y + 10);
         gigaDisplay.print(newMessage);
 
         // Memorizza il nuovo messaggio
@@ -246,8 +281,8 @@ void Display::updateWifiStatus(bool isConnected, String ip, int rssi)
         _lastRssi = rssi;
 
         // Area WiFi Status (Allineato con Hum Y=190)
-        const int WIFI_STATUS_Y = 190;
-        const int WIFI_INFO_Y = 250; // Allineato con Pres Y=250
+        const int WIFI_STATUS_Y = 140; // Spostato in alto (era 190)
+        const int WIFI_INFO_Y = 200; // Spostato in alto (era 250)
         const int X = 420;
         const int W = 380;
         const int H = 50;
@@ -278,6 +313,26 @@ void Display::updateWifiStatus(bool isConnected, String ip, int rssi)
     }
 }
 
+void Display::updateClock(String timeStr, String dateStr)
+{
+    // Aggiorna solo se il minuto è cambiato
+    if (timeStr != _lastTimeDisplayed)
+    {
+        _lastTimeDisplayed = timeStr;
+
+        // Area Orologio (In alto a sinistra, molto piccolo)
+        // Coordinate: X=10, Y=10. Larghezza sufficiente per "HH:MM DD/MM/YYYY"
+        gigaDisplay.fillRect(10, 10, 250, 25, NERO);
+
+        gigaDisplay.setTextColor(GRIGIO_CHIARO); // Colore discreto
+        gigaDisplay.setTextSize(2); // Piccolo
+        gigaDisplay.setCursor(10, 10);
+        gigaDisplay.print(timeStr);
+        gigaDisplay.print("  ");
+        gigaDisplay.print(dateStr);
+    }
+}
+
 void Display::updateTemperature(float temp)
 {
     // Aggiorna solo se cambia significativamente (0.1 gradi)
@@ -286,11 +341,11 @@ void Display::updateTemperature(float temp)
         _lastTempDisplayed = temp;
 
         // Area Temperatura (in alto a sinistra/centro)
-        gigaDisplay.fillRect(20, 130, 400, 50, NERO); // Spostato a sinistra
+        gigaDisplay.fillRect(20, 80, 400, 50, NERO); // Spostato in alto (era 130)
 
         gigaDisplay.setTextColor(VERDE);
         gigaDisplay.setTextSize(3);
-        gigaDisplay.setCursor(30, 140);
+        gigaDisplay.setCursor(30, 90);
         gigaDisplay.print("Temp: ");
         gigaDisplay.print(temp, 1);
         gigaDisplay.print(" C");
@@ -305,11 +360,11 @@ void Display::updateHumidity(float hum)
         _lastHumDisplayed = hum;
 
         // Area Umidità (sotto la temperatura)
-        gigaDisplay.fillRect(20, 190, 400, 50, NERO); // Spostato a sinistra
+        gigaDisplay.fillRect(20, 140, 400, 50, NERO); // Spostato in alto (era 190)
 
         gigaDisplay.setTextColor(CIANO);
         gigaDisplay.setTextSize(3);
-        gigaDisplay.setCursor(30, 200);
+        gigaDisplay.setCursor(30, 150);
         gigaDisplay.print("Hum:  ");
         gigaDisplay.print(hum, 1);
         gigaDisplay.print(" %");
@@ -324,11 +379,11 @@ void Display::updatePressure(float press)
         _lastPressDisplayed = press;
 
         // Area Pressione (sotto l'umidità)
-        gigaDisplay.fillRect(20, 250, 400, 50, NERO); // Spostato a sinistra
+        gigaDisplay.fillRect(20, 200, 400, 50, NERO); // Spostato in alto (era 250)
 
         gigaDisplay.setTextColor(MAGENTA); // Colore diverso per distinguere
         gigaDisplay.setTextSize(3);
-        gigaDisplay.setCursor(30, 260);
+        gigaDisplay.setCursor(30, 210);
         gigaDisplay.print("Pres: ");
         gigaDisplay.print(press, 1);
         gigaDisplay.print(" kPa");

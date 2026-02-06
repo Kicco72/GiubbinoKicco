@@ -15,12 +15,17 @@ public:
         BUTTON_SCAN,
         BUTTON_IMU, // Modificato da STATUS a IMU
         BUTTON_BUSSOLA, // Nuovo pulsante Bussola
-        BUTTON_LED
+        BUTTON_LED,
+        BUTTON_F1,
+        BUTTON_F2,
+        BUTTON_F3,
+        BUTTON_F4
     };
 
     Display();
     void begin();
     void showBaseScreen();
+    void prepareSubScreen(); // Prepara il layout standard per le sottomaschere
     ButtonId checkTouch();
     void drawButtons(); // Metodo reso pubblico per ridisegnare i pulsanti in altre schermate
     void setButtonLabel(ButtonId id, const char* label); // Nuovo metodo per cambiare etichetta
@@ -28,6 +33,7 @@ public:
     
     void updateStatus(bool isScanning, bool isSenseConnected, bool isIoTConnected);
     void updateWifiStatus(bool isConnected, String ip, int rssi); // Nuovo metodo WiFi
+    void updateClock(String timeStr, String dateStr); // Nuovo metodo Orologio
     void updateTemperature(float temp);
     void updateHumidity(float hum);
     void updatePressure(float press);
@@ -46,6 +52,7 @@ private:
     bool _lastWifiConnected;
     String _lastIp;
     int _lastRssi;
+    String _lastTimeDisplayed;
 };
 
 #endif

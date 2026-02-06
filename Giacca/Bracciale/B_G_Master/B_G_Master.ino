@@ -12,8 +12,9 @@
 #include "BleNetwork.h" // Gestione comunicazioni Bluetooth Low Energy
 #include "Imu3DVisualizer.h" // Visualizzazione 3D dell'orientamento
 #include "Bussola.h" // Includi la nuova classe
-#include "wifi.h" // Gestione WiFi
+#include "WiFiGiga.h" // Gestione WiFi
 #include "Stato.h" // Includi la nuova gestione stati
+#include "Memoria.h" // Gestione archiviazione dati
 #include <Arduino_GigaDisplayTouch.h>
 #include <Arduino_GigaDisplay_GFX.h>
 
@@ -25,16 +26,21 @@ GigaDisplayRGB rgb; // Oggetto per controllare il LED RGB integrato nel display 
 // Crea gli oggetti globali per i moduli personalizzati
 Display display; // Gestisce UI e pulsanti
 BleNetwork myNetwork; // Gestisce connessioni BLE con Nano Sense e Nano IoT
-WifiNetwork myWifi; // Gestisce connessione WiFi
+WiFiGiga myWifi; // Gestisce connessione WiFi
 Imu3DVisualizer imuViz; // Gestisce la grafica 3D dell'IMU locale
 Bussola bussolaViz; // Oggetto per la visualizzazione della Bussola
 Stato gestioneStato; // Oggetto per gestire il LED di stato
+Memoria memoria; // Oggetto per gestire l'archivio dati
 
 // --- VARIABILI DI STATO ---
 // Variabile di stato per la modalità di visualizzazione
 bool imuMode = false; // true = visualizza sfera 3D, false = schermata base
 bool bussolaMode = false; // Flag per modalità bussola (true = visualizza bussola)
+bool memoryMode = false; // Flag per modalità visualizzazione memoria
 bool imuOk = false; // Flag per tracciare lo stato dell'hardware IMU
+
+// Variabili per il datalogger
+unsigned long lastLogTime = 0;
 
 // --- SETUP ---
 void setup()
@@ -50,6 +56,7 @@ void setup()
   myNetwork.begin(); // Avvia modulo BLE
   myWifi.begin(); // Avvia connessione WiFi
   gestioneStato.begin(rgb); // Avvia gestione LED passando l'oggetto RGB del display
+  memoria.begin(); // Avvia il filesystem (QSPI Flash)
 
   // Inizializza IMU (Sensore inerziale locale)
   if (!imuViz.begin())
@@ -65,6 +72,9 @@ void setup()
   // Ripristina la schermata base (pulsanti e titolo) perché l'init IMU ha pulito lo schermo
   display.showBaseScreen();
 
+  // Opzionale: Stampa il contenuto attuale della memoria all'avvio
+  // memoria.printContent(); 
+
   Serial.println("Setup completato. Premi 'Scan' per cercare i dispositivi.");
 }
 
@@ -79,71 +89,137 @@ void loop()
   switch (pressedButton)
   {
   case Display::BUTTON_SCAN:
-    if (imuMode) {
-        // In modalità IMU, questo pulsante diventa "Tare"
-        Serial.println("Pulsante 'Tare' premuto!");
-        imuViz.tare();
+    // --- PULSANTE 1 (Alto-Sinistra) ---
+    // Funzione Base: SCAN
+    // Funzione Sub: INDIETRO (Universale)
+    
+    if (memoryMode && memoria.isViewingFiles()) {
+        // Se siamo nella lista file, torniamo alla selezione drive
+        memoria.exitFileList();
+        
+        // Ripristina pulsanti per selezione drive
+        display.setButtonLabel(Display::BUTTON_SCAN, "Indietro");
+        display.setButtonLabel(Display::BUTTON_IMU, "Flash");
+        display.setButtonLabel(Display::BUTTON_BUSSOLA, "USB");
+        display.setButtonLabel(Display::BUTTON_LED, "Entra");
+        display.drawButtons();
+        
+        memoria.drawContent(gigaDisplay);
+    } else if (imuMode || bussolaMode || memoryMode) {
+        // Se siamo in una sottomaschera (o selezione drive), torna alla base
+        Serial.println("Torno alla schermata Base");
+        imuMode = false;
+        bussolaMode = false;
+        memoryMode = false;
+        
+        display.showBaseScreen();
+        display.updateLedButton(myNetwork.getActuatorState());
     } else {
-        // In modalità Base, è "Scan"
-        // Avvia la ricerca dei dispositivi BLE (Nano Sense / Nano IoT)
+        // Siamo nella schermata base: Esegue SCAN
         Serial.println("Pulsante 'Scan' premuto!");
-        myNetwork.startScan(); // Avvia la scansione BLE
+        myNetwork.startScan();
     }
     break;
 
   case Display::BUTTON_IMU:
-    // Gestisce l'ingresso/uscita dalla modalità visualizzazione 3D IMU
-    Serial.println("Pulsante 'IMU' premuto!");
-    if (bussolaMode) break; // Ignora se siamo in bussola (o gestisci uscita)
-    imuMode = !imuMode; // Alterna la modalità
-
-    if (imuMode)
-    {
-      // Entra in modalità IMU: Cambia tasto in "Indietro"
-      display.setButtonLabel(Display::BUTTON_SCAN, "Tare"); // Cambia Scan in Tare
-      display.setButtonLabel(Display::BUTTON_IMU, "Indietro");
-      gigaDisplay.fillScreen(0x0000); // Pulisci schermo (Nero)
-      display.drawButtons();          // Disegna pulsanti aggiornati
-      imuViz.drawBackground();        // Prepara sfondo IMU
-      display.resetStateIcon();       // Forza ridisegno LED virtuale (icona stato)
-    }
-    else
-    {
-      // Torna alla base: Ripristina tasto "IMU"
-      display.setButtonLabel(Display::BUTTON_SCAN, "Scan"); // Ripristina Scan
-      display.setButtonLabel(Display::BUTTON_IMU, "IMU");
-      display.showBaseScreen(); // Ripristina schermata base
-      display.updateLedButton(myNetwork.getActuatorState()); // Ripristina stato colore LED
-      // showBaseScreen chiama già resetStateIcon internamente o possiamo chiamarlo qui
+    // --- PULSANTE 2 ---
+    // Funzione Base: Apri IMU
+    // Funzione Sub: Disponibile
+    
+    if (imuMode || bussolaMode || memoryMode) {
+        // Pulsante disponibile nelle sottomaschere
+        if (memoryMode && !memoria.isViewingFiles()) {
+            // Funzione: Seleziona FLASH
+            memoria.selectDrive(0);
+            memoria.drawContent(gigaDisplay);
+        }
+    } else {
+        // Entra in modalità IMU
+        Serial.println("Apro schermata IMU");
+        imuMode = true;
+        display.prepareSubScreen();
+        // Opzionale: Personalizza pulsanti specifici per IMU qui
+        // display.setButtonLabel(Display::BUTTON_IMU, "Tare"); 
+        imuViz.drawBackground();
     }
     break;
 
   case Display::BUTTON_BUSSOLA:
-    // Gestisce l'ingresso/uscita dalla modalità Bussola
-    Serial.println("Pulsante 'Bussola' premuto!");
-    if (imuMode) break; // Ignora se siamo in IMU
-    bussolaMode = !bussolaMode; // Alterna la modalità
-
-    if (bussolaMode) {
-        // Entra in modalità Bussola
-        display.setButtonLabel(Display::BUTTON_BUSSOLA, "Indietro");
-        gigaDisplay.fillScreen(0x0000); // Pulisci schermo
-        bussolaViz.drawBackground(); // Disegna quadrante bussola
-        display.drawButtons(); // Disegna i pulsanti DOPO lo sfondo per assicurarne la visibilità
-        display.resetStateIcon(); // Ridisegna icona stato
+    // --- PULSANTE 3 ---
+    // Funzione Base: Apri BUSSOLA
+    // Funzione Sub: Disponibile
+    
+    if (imuMode || bussolaMode || memoryMode) {
+        if (memoryMode && !memoria.isViewingFiles()) {
+            // Funzione: Seleziona USB
+            memoria.selectDrive(1);
+            memoria.drawContent(gigaDisplay);
+        }
     } else {
-        // Torna alla base
-        display.setButtonLabel(Display::BUTTON_BUSSOLA, "Bussola");
-        display.showBaseScreen();
-        display.updateLedButton(myNetwork.getActuatorState());
+        // Entra in modalità Bussola
+        Serial.println("Apro schermata Bussola");
+        bussolaMode = true;
+        display.prepareSubScreen();
+        bussolaViz.drawBackground();
     }
     break;
 
   case Display::BUTTON_LED:
-    // Invia comando al Nano IoT per accendere/spegnere il LED remoto
-    Serial.println("Pulsante 'LED' premuto!");
-    myNetwork.toggleActuator(); // Invia comando BLE
-    display.updateLedButton(myNetwork.getActuatorState()); // Aggiorna colore pulsante (Giallo/Nero)
+    // --- PULSANTE 4 ---
+    // Funzione Base: Toggle LED Remoto
+    // Funzione Sub: Disponibile
+    
+    if (imuMode || bussolaMode || memoryMode) {
+        if (memoryMode && !memoria.isViewingFiles()) {
+            // Funzione: ENTRA
+            memoria.enterSelectedDrive();
+            
+            // Pulisci etichette pulsanti (non servono nella lista file per ora)
+            display.setButtonLabel(Display::BUTTON_SCAN, "Indietro"); // Assicura che il tasto Indietro sia visibile
+            display.setButtonLabel(Display::BUTTON_IMU, "");
+            display.setButtonLabel(Display::BUTTON_BUSSOLA, "");
+            display.setButtonLabel(Display::BUTTON_LED, "");
+            display.drawButtons();
+            
+            memoria.drawContent(gigaDisplay);
+        }
+    } else {
+        // Azione LED Base
+        Serial.println("Pulsante 'LED' premuto!");
+        myNetwork.toggleActuator();
+        display.updateLedButton(myNetwork.getActuatorState());
+    }
+    break;
+
+  case Display::BUTTON_F1:
+    // --- PULSANTE 5 (Basso-Sinistra) ---
+    // Funzione Base: Apri MEMORIA
+    // Funzione Sub: Disponibile
+    
+    if (imuMode || bussolaMode || memoryMode) {
+        // Pulsante disponibile
+    } else {
+        // Entra in modalità Memoria
+        Serial.println("Apro schermata Memoria");
+        memoryMode = true;
+        display.prepareSubScreen();
+        
+        // Imposta etichette pulsanti per navigazione
+        display.setButtonLabel(Display::BUTTON_IMU, "Flash");
+        display.setButtonLabel(Display::BUTTON_BUSSOLA, "USB");
+        display.setButtonLabel(Display::BUTTON_LED, "Entra");
+        display.drawButtons(); // Ridisegna per mostrare le nuove etichette
+        
+        // Contenuto
+        memoria.drawContent(gigaDisplay);
+    }
+    break;
+
+  case Display::BUTTON_F2:
+  case Display::BUTTON_F3:
+  case Display::BUTTON_F4:
+    // Pulsanti funzione aggiuntivi (Disponibili in tutte le modalità)
+    Serial.println("Pulsante Funzione Extra premuto!");
     break;
 
   case Display::NONE:
@@ -174,6 +250,11 @@ void loop()
     // Aggiorna la grafica della bussola
     bussolaViz.updateAndDraw(mx, my, mz);
   }
+  else if (memoryMode)
+  {
+    // --- MODALITÀ MEMORIA ---
+    // Schermata statica, non richiede aggiornamenti continui nel loop
+  }
   else
   {
     // --- MODALITÀ BASE ---
@@ -182,6 +263,9 @@ void loop()
     
     // Aggiorna stato WiFi (IP e RSSI)
     display.updateWifiStatus(myWifi.isConnected(), myWifi.getIP(), myWifi.getRSSI());
+    
+    // Aggiorna Orologio (Data e Ora in alto a sinistra)
+    display.updateClock(myWifi.getTimeString(), myWifi.getDateString());
 
     // Aggiorna la temperatura/umidità/pressione sul display se connesso a Sense
     if (myNetwork.isSenseConnected())
@@ -199,7 +283,22 @@ void loop()
     myNetwork.stopScan();
   }
 
-  // 7. Gestione Stato Sistema (LED RGB) con criteri aggiornati
+  // 7. Gestione Archiviazione Dati (Ogni ora)
+  // 3600000 ms = 1 ora
+  if (millis() - lastLogTime > 3600000)
+  {
+      // Salva solo se abbiamo dati validi dal sensore Sense
+      if (myNetwork.isSenseConnected()) {
+          memoria.logData(myWifi.getDateString(), 
+                          myWifi.getTimeString(), 
+                          myNetwork.getLatestTemperature(), 
+                          myNetwork.getLatestHumidity(), 
+                          myNetwork.getLatestPressure());
+      }
+      lastLogTime = millis();
+  }
+
+  // 8. Gestione Stato Sistema (LED RGB) con criteri aggiornati
 
   // Recupera temperatura corrente per controllo allarmi
   float temp = myNetwork.getLatestTemperature();
