@@ -27,6 +27,7 @@ public:
     void updateLedButton(bool isOn); // Aggiorna il colore del pulsante LED
     
     void updateStatus(bool isScanning, bool isSenseConnected, bool isIoTConnected);
+    void updateWifiStatus(bool isConnected, String ip, int rssi); // Nuovo metodo WiFi
     void updateTemperature(float temp);
     void updateHumidity(float hum);
     void updatePressure(float press);
@@ -42,6 +43,9 @@ private:
     float _lastPressDisplayed;
     uint16_t _lastStateColor;
     bool _buttonPressed; // Flag per gestire il debounce senza bloccare
+    bool _lastWifiConnected;
+    String _lastIp;
+    int _lastRssi;
 };
 
 #endif

@@ -12,6 +12,7 @@
 #include "BleNetwork.h" // Gestione comunicazioni Bluetooth Low Energy
 #include "Imu3DVisualizer.h" // Visualizzazione 3D dell'orientamento
 #include "Bussola.h" // Includi la nuova classe
+#include "wifi.h" // Gestione WiFi
 #include "Stato.h" // Includi la nuova gestione stati
 #include <Arduino_GigaDisplayTouch.h>
 #include <Arduino_GigaDisplay_GFX.h>
@@ -24,6 +25,7 @@ GigaDisplayRGB rgb; // Oggetto per controllare il LED RGB integrato nel display 
 // Crea gli oggetti globali per i moduli personalizzati
 Display display; // Gestisce UI e pulsanti
 BleNetwork myNetwork; // Gestisce connessioni BLE con Nano Sense e Nano IoT
+WifiNetwork myWifi; // Gestisce connessione WiFi
 Imu3DVisualizer imuViz; // Gestisce la grafica 3D dell'IMU locale
 Bussola bussolaViz; // Oggetto per la visualizzazione della Bussola
 Stato gestioneStato; // Oggetto per gestire il LED di stato
@@ -46,6 +48,7 @@ void setup()
   // Inizializza i moduli hardware e software
   display.begin(); // Avvia display e touch
   myNetwork.begin(); // Avvia modulo BLE
+  myWifi.begin(); // Avvia connessione WiFi
   gestioneStato.begin(rgb); // Avvia gestione LED passando l'oggetto RGB del display
 
   // Inizializza IMU (Sensore inerziale locale)
@@ -150,6 +153,7 @@ void loop()
 
   // 3. Aggiorna la logica di rete (gestisce connessioni, riceve dati, riconnessioni, etc.)
   myNetwork.update();
+  myWifi.update(); // Gestisce la riconnessione WiFi automatica
 
   // Aggiorna il lampeggio del LED di stato
   gestioneStato.update();
@@ -175,6 +179,9 @@ void loop()
     // --- MODALITÀ BASE ---
     // Mostra stato connessioni e dati ambientali
     display.updateStatus(myNetwork.isScanning(), myNetwork.isSenseConnected(), myNetwork.isIoTConnected());
+    
+    // Aggiorna stato WiFi (IP e RSSI)
+    display.updateWifiStatus(myWifi.isConnected(), myWifi.getIP(), myWifi.getRSSI());
 
     // Aggiorna la temperatura/umidità/pressione sul display se connesso a Sense
     if (myNetwork.isSenseConnected())
@@ -202,7 +209,7 @@ void loop()
   uint16_t coloreStato = VERDE; // Default
 
   // Logica prioritaria per determinare il colore dello stato
-  if (!imuOk || !myNetwork.isSenseConnected() || !myNetwork.isIoTConnected())
+  if (!imuOk || !myNetwork.isSenseConnected() || !myNetwork.isIoTConnected() || !myWifi.isConnected())
   {
     // Priorità 1: Se qualcosa non funziona o non è connesso -> Rosso (Pericolo)
     gestioneStato.imposta(Stato::PERICOLO);
