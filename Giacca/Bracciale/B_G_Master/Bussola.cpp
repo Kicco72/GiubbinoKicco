@@ -36,11 +36,13 @@ void Bussola::updateAndDraw(float x, float y, float z)
     // Calcolo Heading (semplificato) in radianti
     // Nota: La calibrazione e la compensazione tilt (con accelerometro) migliorerebbero la precisione
     // Modifica: Ruotiamo di -90 gradi (PI/2) affinché l'asse X (valore più alto) punti verso l'alto (N)
-    float heading = atan2(y, x) - (PI / 2.0);
+    // FIX: Usiamo -y per invertire la rotazione dell'ago rispetto al movimento del sensore.
+    // Quando il sensore ruota CW (verso Est), l'ago deve ruotare CCW (verso sinistra) per puntare al Nord.
+    float heading = atan2(-y, x) - (PI / 2.0);
 
     // Converti in gradi per visualizzazione numerica
-    // Aggiungiamo 90 gradi per compensare la rotazione della lancetta e avere 0° al Nord
-    float headingDeg = (heading * 180.0 / PI) + 90.0;
+    // Calcoliamo i gradi basandoci sull'angolo originale (atan2(y,x)) che rappresenta la direzione corretta (0=N, 90=E)
+    float headingDeg = atan2(-y, x) * 180.0 / PI;
     if (headingDeg < 0)
         headingDeg += 360;
 
@@ -53,17 +55,27 @@ void Bussola::updateAndDraw(float x, float y, float z)
     drawNeedle(heading, ROSSO);
 
     // Info Testuali
-    gigaDisplay.fillRect(0, 340, 800, 40, NERO); // Pulisci area testo sopra i bottoni (spostato a Y=340)
-    gigaDisplay.setCursor(20, 350);
+    // Pulisci area in alto a sinistra
+    gigaDisplay.fillRect(10, 10, 320, 160, NERO);
+
     gigaDisplay.setTextColor(BIANCO);
-    gigaDisplay.setTextSize(2);
-    gigaDisplay.print("Heading: ");
+    gigaDisplay.setTextSize(3); // Etichetta più visibile
+    gigaDisplay.setCursor(20, 20);
+    gigaDisplay.print("Angolo:");
+
+    gigaDisplay.setTextSize(4); // Valore molto grande
+    gigaDisplay.setCursor(20, 50);
     gigaDisplay.print(headingDeg, 1);
-    gigaDisplay.print(" deg   (X:");
-    gigaDisplay.print(x, 0);
-    gigaDisplay.print(" Y:");
-    gigaDisplay.print(y, 0);
-    gigaDisplay.print(")");
+    gigaDisplay.print((char)247); // Simbolo gradi
+
+    // Visualizzazione Campo Magnetico
+    gigaDisplay.setTextSize(2);
+    gigaDisplay.setCursor(20, 100);
+    gigaDisplay.print("Campo (uT):");
+    gigaDisplay.setCursor(20, 130);
+    gigaDisplay.print("X:"); gigaDisplay.print((int)x);
+    gigaDisplay.print(" Y:"); gigaDisplay.print((int)y);
+    gigaDisplay.print(" Z:"); gigaDisplay.print((int)z);
 }
 
 void Bussola::drawNeedle(float angle, uint16_t color)

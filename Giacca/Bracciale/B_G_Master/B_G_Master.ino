@@ -76,9 +76,16 @@ void loop()
   switch (pressedButton)
   {
   case Display::BUTTON_SCAN:
-    // Avvia la ricerca dei dispositivi BLE (Nano Sense / Nano IoT)
-    Serial.println("Pulsante 'Scan' premuto!");
-    myNetwork.startScan(); // Avvia la scansione BLE
+    if (imuMode) {
+        // In modalità IMU, questo pulsante diventa "Tare"
+        Serial.println("Pulsante 'Tare' premuto!");
+        imuViz.tare();
+    } else {
+        // In modalità Base, è "Scan"
+        // Avvia la ricerca dei dispositivi BLE (Nano Sense / Nano IoT)
+        Serial.println("Pulsante 'Scan' premuto!");
+        myNetwork.startScan(); // Avvia la scansione BLE
+    }
     break;
 
   case Display::BUTTON_IMU:
@@ -90,6 +97,7 @@ void loop()
     if (imuMode)
     {
       // Entra in modalità IMU: Cambia tasto in "Indietro"
+      display.setButtonLabel(Display::BUTTON_SCAN, "Tare"); // Cambia Scan in Tare
       display.setButtonLabel(Display::BUTTON_IMU, "Indietro");
       gigaDisplay.fillScreen(0x0000); // Pulisci schermo (Nero)
       display.drawButtons();          // Disegna pulsanti aggiornati
@@ -99,6 +107,7 @@ void loop()
     else
     {
       // Torna alla base: Ripristina tasto "IMU"
+      display.setButtonLabel(Display::BUTTON_SCAN, "Scan"); // Ripristina Scan
       display.setButtonLabel(Display::BUTTON_IMU, "IMU");
       display.showBaseScreen(); // Ripristina schermata base
       display.updateLedButton(myNetwork.getActuatorState()); // Ripristina stato colore LED

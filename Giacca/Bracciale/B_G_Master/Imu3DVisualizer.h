@@ -35,12 +35,31 @@ public:
     bool begin();
     void updateAndDraw();
     void drawBackground(); // Nuovo metodo per disegnare gli elementi statici
+    void tare(); // Imposta l'orientamento attuale come zero
 
 private:
     // Current orientation
     float pitch = 0.0;
     float roll = 0.0;
     float yaw = 0.0;
+
+    // Offsets for Tare
+    float pitchOffset = 0.0;
+    float rollOffset = 0.0;
+    float yawOffset = 0.0;
+
+    // Biases for Sensor Calibration (Tare)
+    float accBiasX = 0.0;
+    float accBiasY = 0.0;
+    float accBiasZ = 0.0;
+    float gyroBiasX = 0.0;
+    float gyroBiasY = 0.0;
+    float gyroBiasZ = 0.0;
+
+    // Variabili per il filtro Low Pass del giroscopio (Smoothing)
+    float filt_gx = 0.0;
+    float filt_gy = 0.0;
+    float filt_gz = 0.0;
 
     // Timing for physics integration
     unsigned long lastUpdateMicros = 0;
