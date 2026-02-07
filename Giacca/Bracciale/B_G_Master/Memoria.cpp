@@ -3,7 +3,7 @@
 
 #include "Memoria.h"
 
-Memoria::Memoria() : _msd(nullptr), _fsUSB(nullptr), _qspi(nullptr), _fsQSPI(nullptr), _mounted(false), _selectedDrive(0) {}
+Memoria::Memoria() : _msd(nullptr), _fsUSB(nullptr), _qspi(nullptr), _fsQSPI(nullptr), _mounted(false), _selectedDrive(0), _viewingFiles(false), _viewingFileContent(false), _fileListIndex(0), _fileListScroll(0), _contentScrollLine(0), _lastFileCount(0) {}
 
 bool Memoria::begin() {
     // Istanzia il driver per USB Mass Storage e il FileSystem FAT
@@ -64,9 +64,26 @@ bool Memoria::ensureConnection() {
 bool Memoria::logData(String date, String time, float temp, float hum, float press) {
     if (!ensureConnection()) return false;
 
-    // Apre il file in modalità "append" (aggiungi in coda)
-    // Il percorso è /usb/Archivio.csv (dove "usb" è il nome dato al FATFileSystem)
-    FILE *f = fopen("/usb/Archivio.csv", "a+");
+    // Controllo consistenza file: Se esiste un file con vecchio formato (virgole), lo sovrascriviamo
+    // per evitare conflitti di lettura in Excel.
+    const char* mode = "a+"; // Default: Append (Aggiungi in coda)
+    
+    FILE *f_check = fopen("/usb/Archivio.csv", "r");
+    if (f_check) {
+        char buffer[128];
+        if (fgets(buffer, sizeof(buffer), f_check)) {
+            String header = String(buffer);
+            // Se troviamo virgole ma non punti e virgola, è il vecchio formato
+            if (header.indexOf(',') != -1 && header.indexOf(';') == -1) {
+                Serial.println("Memoria: Formato CSV obsoleto rilevato. Rigenerazione file...");
+                mode = "w"; // Modalità "Write": Sovrascrive e crea un file nuovo pulito
+            }
+        }
+        fclose(f_check);
+    }
+
+    // Apre il file (Append o Write a seconda del controllo)
+    FILE *f = fopen("/usb/Archivio.csv", mode);
     if (!f) {
         Serial.println("Memoria: Impossibile aprire il file su USB.");
         return false;
@@ -108,10 +125,54 @@ void Memoria::selectDrive(int driveIndex) {
 
 void Memoria::enterSelectedDrive() {
     _viewingFiles = true;
+    _fileListIndex = 0;
+    _fileListScroll = 0;
 }
 
 void Memoria::exitFileList() {
     _viewingFiles = false;
+}
+
+void Memoria::moveFileSelection(int delta) {
+    _fileListIndex += delta;
+    if (_fileListIndex < 0) _fileListIndex = 0;
+    if (_lastFileCount > 0 && _fileListIndex >= _lastFileCount) _fileListIndex = _lastFileCount - 1;
+    
+    // Auto-scroll della lista
+    if (_fileListIndex < _fileListScroll) _fileListScroll = _fileListIndex;
+    if (_fileListIndex >= _fileListScroll + 7) _fileListScroll = _fileListIndex - 6;
+}
+
+void Memoria::openSelectedFile() {
+    // Trova il nome del file selezionato
+    mbed::FileSystem* fs = (_selectedDrive == 0) ? (mbed::FileSystem*)_fsQSPI : (mbed::FileSystem*)_fsUSB;
+    mbed::Dir dir;
+    if (dir.open(fs, "/") == 0) {
+        struct dirent d;
+        int count = 0;
+        while (dir.read(&d) > 0) {
+            if (d.d_name[0] == '.') continue;
+            if (count == _fileListIndex) {
+                _currentFileName = d.d_name;
+                _viewingFileContent = true;
+                _contentScrollLine = 0;
+                break;
+            }
+            count++;
+        }
+        dir.close();
+    }
+}
+
+void Memoria::closeFileView() {
+    _viewingFileContent = false;
+}
+
+bool Memoria::isViewingFileContent() { return _viewingFileContent; }
+
+void Memoria::scrollFileContent(int delta) {
+    _contentScrollLine += delta;
+    if (_contentScrollLine < 0) _contentScrollLine = 0;
 }
 
 bool Memoria::isViewingFiles() {
@@ -123,7 +184,9 @@ int Memoria::getSelectedDrive() {
 }
 
 void Memoria::drawContent(GigaDisplay_GFX& display) {
-    if (_viewingFiles) {
+    if (_viewingFileContent) {
+        drawFileContent(display);
+    } else if (_viewingFiles) {
         drawFileList(display);
     } else {
         drawDriveList(display);
@@ -229,17 +292,26 @@ void Memoria::drawFileList(GigaDisplay_GFX& display) {
     display.setTextSize(2);
 
     struct dirent d;
+    int count = 0;
     int lines = 0;
     int y = 100;
 
-    while (dir.read(&d) > 0 && lines < 7) {
+    while (dir.read(&d) > 0) {
         if (d.d_name[0] == '.') continue;
         
+        // Gestione Scroll e Selezione
+        if (count < _fileListScroll) {
+            count++;
+            continue;
+        }
+        if (lines >= 7) { count++; continue; } // Conta comunque per _lastFileCount
+
         // Nome File (Troncato)
         String fname = d.d_name;
         if (fname.length() > 25) fname = fname.substring(0, 22) + "...";
 
         display.setCursor(20, y);
+        if (count == _fileListIndex) display.print("> "); else display.print("  ");
         display.print(fname);
         
         // Recupera dimensione
@@ -282,8 +354,10 @@ void Memoria::drawFileList(GigaDisplay_GFX& display) {
         
         y += 30;
         lines++;
+        count++;
     }
     dir.close();
+    _lastFileCount = count;
     
     if (lines == 0) {
         display.setCursor(20, 100);
@@ -291,21 +365,43 @@ void Memoria::drawFileList(GigaDisplay_GFX& display) {
     }
 }
 
-void Memoria::printContent() {
-    if (!ensureConnection()) return;
+void Memoria::drawFileContent(GigaDisplay_GFX& display) {
+    display.fillRect(0, 0, 800, 320, 0x0000);
+    display.setCursor(20, 20);
+    display.setTextSize(3);
+    display.setTextColor(0xffff, 0x0000);
+    display.print("File: "); display.println(_currentFileName);
+    display.drawLine(20, 50, 780, 50, 0xffff);
 
-    FILE *f = fopen("/usb/Archivio.csv", "r");
+    display.setTextSize(2);
+    display.setTextColor(0x07E0, 0x0000);
+
+    mbed::FileSystem* fs = (_selectedDrive == 0) ? (mbed::FileSystem*)_fsQSPI : (mbed::FileSystem*)_fsUSB;
+    String path = "/" + String(_selectedDrive == 0 ? "fs" : "usb") + "/" + _currentFileName;
+    FILE *f = fopen(path.c_str(), "r");
     if (!f) {
-        Serial.println("Memoria: File Archivio.csv non trovato su USB.");
+        display.setCursor(20, 70);
+        display.println("Errore apertura file.");
         return;
     }
 
-    Serial.println("--- INIZIO ARCHIVIO MEMORIA ---");
     char buffer[128];
-    // Legge riga per riga
-    while (fgets(buffer, sizeof(buffer), f)) {
-        Serial.print(buffer);
+    int currentLine = 0;
+    // Salta le righe scrollate
+    while (currentLine < _contentScrollLine && fgets(buffer, sizeof(buffer), f)) {
+        currentLine++;
     }
-    Serial.println("--- FINE ARCHIVIO MEMORIA ---");
+
+    int y = 70;
+    int linesDrawn = 0;
+    while (linesDrawn < 10 && fgets(buffer, sizeof(buffer), f)) {
+        String line = buffer;
+        line.trim();
+        line.replace(';', ' '); // Sostituisci separatori per leggibilità
+        display.setCursor(20, y);
+        display.println(line);
+        y += 25;
+        linesDrawn++;
+    }
     fclose(f);
 }

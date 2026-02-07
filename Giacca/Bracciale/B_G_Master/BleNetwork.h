@@ -52,15 +52,12 @@ class BleNetwork {
     float _lastPressure;
     float _magX, _magY, _magZ;
     bool _actuatorState;
-    unsigned long _lastPollTime; // Per temporizzare la lettura
 
     // UUIDs
-    const char* _uuidSenseService;
     const char* _uuidSenseCharTemp;
     const char* _uuidSenseCharHum;
     const char* _uuidSenseCharPress;
     const char* _uuidSenseCharMag;
-    const char* _uuidIoTService;
     const char* _uuidIoTCharSwitch;
 
     // Metodi interni (privati)

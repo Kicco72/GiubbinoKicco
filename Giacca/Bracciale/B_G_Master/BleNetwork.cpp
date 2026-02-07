@@ -21,13 +21,11 @@ BleNetwork::BleNetwork()
     _isScanning = false;
 
     // Definizione degli UUID
-    _uuidSenseService = "181A";
     _uuidSenseCharTemp = "2A6E";
     _uuidSenseCharHum = "2A6F";
     _uuidSenseCharPress = "2A6D";
     _uuidSenseCharMag = "2AA1";
 
-    _uuidIoTService = "19B10000-E8F2-537E-4F6C-D104768A1214";
     _uuidIoTCharSwitch = "19B10001-E8F2-537E-4F6C-D104768A1214";
 }
 

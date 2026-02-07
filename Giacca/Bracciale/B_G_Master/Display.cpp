@@ -60,9 +60,9 @@ void Display::showBaseScreen()
     setButtonLabel(BUTTON_BUSSOLA, "Bussola");
     setButtonLabel(BUTTON_LED, "LED");
     setButtonLabel(BUTTON_F1, "Memoria");
-    setButtonLabel(BUTTON_F2, "F 2");
-    setButtonLabel(BUTTON_F3, "F 3");
-    setButtonLabel(BUTTON_F4, "F 4");
+    setButtonLabel(BUTTON_F2, "");
+    setButtonLabel(BUTTON_F3, "");
+    setButtonLabel(BUTTON_F4, "");
 
     gigaDisplay.fillScreen(NERO);
     gigaDisplay.setTextColor(BIANCO);
@@ -335,8 +335,8 @@ void Display::updateClock(String timeStr, String dateStr)
 
 void Display::updateTemperature(float temp)
 {
-    // Aggiorna solo se cambia significativamente (0.1 gradi)
-    if (abs(temp - _lastTempDisplayed) > 0.1)
+    // Aggiorna solo se cambia significativamente (0.01 gradi)
+    if (abs(temp - _lastTempDisplayed) > 0.01)
     {
         _lastTempDisplayed = temp;
 
@@ -347,15 +347,15 @@ void Display::updateTemperature(float temp)
         gigaDisplay.setTextSize(3);
         gigaDisplay.setCursor(30, 90);
         gigaDisplay.print("Temp: ");
-        gigaDisplay.print(temp, 1);
+        gigaDisplay.print(temp, 2);
         gigaDisplay.print(" C");
     }
 }
 
 void Display::updateHumidity(float hum)
 {
-    // Aggiorna solo se cambia significativamente (0.1 %)
-    if (abs(hum - _lastHumDisplayed) > 0.1)
+    // Aggiorna solo se cambia significativamente (0.01 %)
+    if (abs(hum - _lastHumDisplayed) > 0.01)
     {
         _lastHumDisplayed = hum;
 
@@ -366,15 +366,15 @@ void Display::updateHumidity(float hum)
         gigaDisplay.setTextSize(3);
         gigaDisplay.setCursor(30, 150);
         gigaDisplay.print("Hum:  ");
-        gigaDisplay.print(hum, 1);
+        gigaDisplay.print(hum, 2);
         gigaDisplay.print(" %");
     }
 }
 
 void Display::updatePressure(float press)
 {
-    // Aggiorna solo se cambia significativamente (0.1 kPa)
-    if (abs(press - _lastPressDisplayed) > 0.1)
+    // Aggiorna solo se cambia significativamente (0.01 kPa)
+    if (abs(press - _lastPressDisplayed) > 0.01)
     {
         _lastPressDisplayed = press;
 
@@ -385,7 +385,7 @@ void Display::updatePressure(float press)
         gigaDisplay.setTextSize(3);
         gigaDisplay.setCursor(30, 210);
         gigaDisplay.print("Pres: ");
-        gigaDisplay.print(press, 1);
+        gigaDisplay.print(press, 2);
         gigaDisplay.print(" kPa");
     }
 }

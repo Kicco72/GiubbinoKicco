@@ -7,14 +7,14 @@
 // --- INCLUSIONE LIBRERIE ---
 
 // Includi i moduli del progetto
-#include "mbed.h" // Mbed OS (Sistema operativo real-time sottostante)
-#include "Display.h" // Gestione interfaccia grafica e touch
-#include "BleNetwork.h" // Gestione comunicazioni Bluetooth Low Energy
+#include "mbed.h"            // Mbed OS (Sistema operativo real-time sottostante)
+#include "Display.h"         // Gestione interfaccia grafica e touch
+#include "BleNetwork.h"      // Gestione comunicazioni Bluetooth Low Energy
 #include "Imu3DVisualizer.h" // Visualizzazione 3D dell'orientamento
-#include "Bussola.h" // Includi la nuova classe
-#include "WiFiGiga.h" // Gestione WiFi
-#include "Stato.h" // Includi la nuova gestione stati
-#include "Memoria.h" // Gestione archiviazione dati
+#include "Bussola.h"         // Visualizzazione della Bussola
+#include "WiFiGiga.h"        // Gestione WiFi
+#include "Stato.h"           // Includi la nuova gestione stati
+#include "Memoria.h"         // Gestione archiviazione dati
 #include <Arduino_GigaDisplayTouch.h>
 #include <Arduino_GigaDisplay_GFX.h>
 
@@ -22,24 +22,24 @@
 
 // Oggetto Display Globale (condiviso tra Display.cpp e Imu3DVisualizer.cpp)
 GigaDisplay_GFX gigaDisplay;
-GigaDisplayRGB rgb; // Oggetto per controllare il LED RGB integrato nel display shield
+GigaDisplayRGB rgb;         // Oggetto per controllare il LED RGB integrato nel display shield
 
 // Crea gli oggetti globali per i moduli personalizzati
-Display display; // Gestisce UI e pulsanti
-BleNetwork myNetwork; // Gestisce connessioni BLE con Nano Sense e Nano IoT
-WiFiGiga myWifi; // Gestisce connessione WiFi
-Imu3DVisualizer imuViz; // Gestisce la grafica 3D dell'IMU locale
-Bussola bussolaViz; // Oggetto per la visualizzazione della Bussola
-Stato gestioneStato; // Oggetto per gestire il LED di stato
-Memoria memoria; // Oggetto per gestire l'archivio dati
+Display display;            // Gestisce UI e pulsanti
+BleNetwork myNetwork;       // Gestisce connessioni BLE con Nano Sense e Nano IoT
+WiFiGiga myWifi;            // Gestisce connessione WiFi
+Imu3DVisualizer imuViz;     // Gestisce la grafica 3D dell'IMU locale
+Bussola bussolaViz;         // Oggetto per la visualizzazione della Bussola
+Stato gestioneStato;        // Oggetto per gestire il LED di stato
+Memoria memoria;            // Oggetto per gestire l'archivio dati
 
 // --- VARIABILI DI STATO ---
 
 // Variabile di stato per la modalità di visualizzazione
-bool imuMode = false; // true = visualizza sfera 3D, false = schermata base
-bool bussolaMode = false; // Flag per modalità bussola (true = visualizza bussola)
-bool memoryMode = false; // Flag per modalità visualizzazione memoria
-bool imuOk = false; // Flag per tracciare lo stato dell'hardware IMU
+bool imuMode = false;       // true = visualizza sfera 3D, false = schermata base
+bool bussolaMode = false;   // Flag per modalità bussola (true = visualizza bussola)
+bool memoryMode = false;    // Flag per modalità visualizzazione memoria
+bool imuOk = false;         // Flag per tracciare lo stato dell'hardware IMU
 
 // Variabili per il datalogger
 unsigned long lastLogTime = 0;
@@ -92,24 +92,43 @@ void loop()
     // Funzione Base: SCAN
     // Funzione Sub: INDIETRO (Universale)
     
-    if (memoryMode && memoria.isViewingFiles()) {
-        // Se siamo nella lista file, torniamo alla selezione drive
-        memoria.exitFileList();
-        
-        // Ripristina pulsanti per selezione drive
-        display.setButtonLabel(Display::BUTTON_SCAN, "Indietro");
-        display.setButtonLabel(Display::BUTTON_IMU, "Flash");
-        display.setButtonLabel(Display::BUTTON_BUSSOLA, "USB");
-        display.setButtonLabel(Display::BUTTON_LED, "Entra");
-        display.drawButtons();
-        
-        memoria.drawContent(gigaDisplay);
-    } else if (imuMode || bussolaMode || memoryMode) {
-        // Se siamo in una sottomaschera (o selezione drive), torna alla base
+    if (memoryMode) {
+        if (memoria.isViewingFileContent()) {
+            // Livello 3: Stiamo guardando il contenuto -> Torna alla Lista File
+            memoria.closeFileView();
+            
+            // Ripristina pulsanti per lista file
+            display.setButtonLabel(Display::BUTTON_SCAN, "Indietro");
+            display.setButtonLabel(Display::BUTTON_IMU, "Su");
+            display.setButtonLabel(Display::BUTTON_BUSSOLA, "Giu");
+            display.setButtonLabel(Display::BUTTON_LED, "Apri");
+            display.drawButtons();
+            
+            memoria.drawContent(gigaDisplay);
+        } else if (memoria.isViewingFiles()) {
+            // Livello 2: Stiamo guardando la lista file -> Torna alla Selezione Drive
+            memoria.exitFileList();
+            
+            // Ripristina pulsanti per selezione drive
+            display.setButtonLabel(Display::BUTTON_SCAN, "Indietro");
+            display.setButtonLabel(Display::BUTTON_IMU, "Flash");
+            display.setButtonLabel(Display::BUTTON_BUSSOLA, "USB");
+            display.setButtonLabel(Display::BUTTON_LED, "Entra");
+            display.drawButtons();
+            
+            memoria.drawContent(gigaDisplay);
+        } else {
+            // Livello 1: Stiamo guardando la Selezione Drive -> Torna alla Schermata Base
+            Serial.println("Torno alla schermata Base");
+            memoryMode = false;
+            display.showBaseScreen();
+            display.updateLedButton(myNetwork.getActuatorState());
+        }
+    } else if (imuMode || bussolaMode) {
+        // Se siamo in una sottomaschera (IMU o Bussola), torna alla base
         Serial.println("Torno alla schermata Base");
         imuMode = false;
         bussolaMode = false;
-        memoryMode = false;
         
         display.showBaseScreen();
         display.updateLedButton(myNetwork.getActuatorState());
@@ -127,10 +146,18 @@ void loop()
     
     if (imuMode || bussolaMode || memoryMode) {
         // Pulsante disponibile nelle sottomaschere
-        if (memoryMode && !memoria.isViewingFiles()) {
+        if (memoryMode) {
+            if (memoria.isViewingFileContent()) {
+                memoria.scrollFileContent(-1); // Scroll Su
+                memoria.drawContent(gigaDisplay);
+            } else if (memoria.isViewingFiles()) {
+                memoria.moveFileSelection(-1); // Selezione Su
+                memoria.drawContent(gigaDisplay);
+            } else {
             // Funzione: Seleziona FLASH
             memoria.selectDrive(0);
             memoria.drawContent(gigaDisplay);
+            }
         }
     } else {
         // Entra in modalità IMU
@@ -147,10 +174,18 @@ void loop()
     // Funzione Sub: Disponibile
     
     if (imuMode || bussolaMode || memoryMode) {
-        if (memoryMode && !memoria.isViewingFiles()) {
+        if (memoryMode) {
+            if (memoria.isViewingFileContent()) {
+                memoria.scrollFileContent(1); // Scroll Giu
+                memoria.drawContent(gigaDisplay);
+            } else if (memoria.isViewingFiles()) {
+                memoria.moveFileSelection(1); // Selezione Giu
+                memoria.drawContent(gigaDisplay);
+            } else {
             // Funzione: Seleziona USB
             memoria.selectDrive(1);
             memoria.drawContent(gigaDisplay);
+            }
         }
     } else {
         // Entra in modalità Bussola
@@ -167,18 +202,31 @@ void loop()
     // Funzione Sub: Disponibile
     
     if (imuMode || bussolaMode || memoryMode) {
-        if (memoryMode && !memoria.isViewingFiles()) {
+        if (memoryMode) {
+            if (memoria.isViewingFileContent()) {
+                // Pulsante non usato o Page Down
+            } else if (memoria.isViewingFiles()) {
+                memoria.openSelectedFile();
+                // Imposta pulsanti per visualizzazione file
+                display.setButtonLabel(Display::BUTTON_SCAN, "Indietro");
+                display.setButtonLabel(Display::BUTTON_IMU, "Su");
+                display.setButtonLabel(Display::BUTTON_BUSSOLA, "Giu");
+                display.setButtonLabel(Display::BUTTON_LED, "");
+                display.drawButtons();
+                memoria.drawContent(gigaDisplay);
+            } else {
             // Funzione: ENTRA
             memoria.enterSelectedDrive();
             
             // Pulisci etichette pulsanti (non servono nella lista file per ora)
             display.setButtonLabel(Display::BUTTON_SCAN, "Indietro"); // Assicura che il tasto Indietro sia visibile
-            display.setButtonLabel(Display::BUTTON_IMU, "");
-            display.setButtonLabel(Display::BUTTON_BUSSOLA, "");
-            display.setButtonLabel(Display::BUTTON_LED, "");
+            display.setButtonLabel(Display::BUTTON_IMU, "Su");
+            display.setButtonLabel(Display::BUTTON_BUSSOLA, "Giu");
+            display.setButtonLabel(Display::BUTTON_LED, "Apri");
             display.drawButtons();
             
             memoria.drawContent(gigaDisplay);
+            }
         }
     } else {
         // Azione LED Base
@@ -210,13 +258,6 @@ void loop()
     }
     break;
 
-  case Display::BUTTON_F2:
-  case Display::BUTTON_F3:
-  case Display::BUTTON_F4:
-    // Pulsanti funzione aggiuntivi (Disponibili in tutte le modalità)
-    Serial.println("Pulsante Funzione Extra premuto!");
-    break;
-
   case Display::NONE:
     // Nessun pulsante premuto, non fare nulla
     break;
@@ -224,7 +265,7 @@ void loop()
 
   // 3. Aggiorna la logica di rete (gestisce connessioni, riceve dati, riconnessioni, etc.)
   myNetwork.update();
-  myWifi.update(); // Gestisce la riconnessione WiFi automatica
+  myWifi.update();            // Gestisce la riconnessione WiFi automatica
 
   // Aggiorna il lampeggio del LED di stato
   gestioneStato.update();
@@ -306,15 +347,15 @@ void loop()
   uint16_t coloreStato = VERDE; // Default
 
   // Logica prioritaria per determinare il colore dello stato
-  if (!imuOk || !myNetwork.isSenseConnected() || !myNetwork.isIoTConnected() || !myWifi.isConnected())
+  if (!imuOk)
   {
-    // Priorità 1: Se qualcosa non funziona o non è connesso -> Rosso (Pericolo)
+    // Priorità 1: Errore Hardware -> Rosso (Pericolo)
     gestioneStato.imposta(Stato::PERICOLO);
     coloreStato = ROSSO;
   }
-  else if (allarmeTemp)
+  else if (!myNetwork.isSenseConnected() || !myNetwork.isIoTConnected() || !myWifi.isConnected() || allarmeTemp)
   {
-    // Priorità 2: Tutto connesso ma temperatura fuori range -> Giallo (Attenzione)
+    // Priorità 2: Connessioni perse o Allarme Temp -> Giallo (Attenzione)
     gestioneStato.imposta(Stato::ATTENZIONE);
     coloreStato = GIALLO;
   }
