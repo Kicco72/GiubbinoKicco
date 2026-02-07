@@ -1,3 +1,6 @@
+// Kicco972.net
+
+
 #include "Bussola.h"
 #include <math.h>
 

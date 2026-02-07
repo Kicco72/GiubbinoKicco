@@ -1,3 +1,6 @@
+// Kicco972.net
+
+
 #include "BleNetwork.h"
 
 // --- Costruttore ---
@@ -44,6 +47,12 @@ void BleNetwork::begin()
 
 void BleNetwork::startScan()
 {
+    // Evita scansioni inutili se siamo già connessi a tutto
+    if (_senseConnected && _iotConnected) {
+        Serial.println("Info: Già connesso a tutti i dispositivi.");
+        return;
+    }
+
     // Controllo la mia variabile interna invece di BLE.isScanning()
     if (!_isScanning)
     {
@@ -102,13 +111,6 @@ void BleNetwork::update()
             Serial.println("Avviso: Connessione con IoT persa!");
             _iotConnected = false;
         }
-    }
-
-    // Logica di Auto-Recovery: Se abbiamo perso una connessione e non stiamo scansionando, ripartiamo?
-    // Per ora lasciamo manuale tramite pulsante, ma resettiamo lo stato interno se necessario.
-    if (!_senseConnected && !_iotConnected && !_isScanning)
-    {
-        // Siamo completamente disconnessi.
     }
 }
 
@@ -269,7 +271,6 @@ void BleNetwork::pollSense()
         _magX = data[0];
         _magY = data[1];
         _magZ = data[2];
-        // Serial.println("Mag aggiornato");
     }
 }
 

@@ -1,3 +1,6 @@
+// Kicco972.net
+
+
 #include "Display.h"
 
 // Definizione dei colori
@@ -163,9 +166,6 @@ Display::ButtonId Display::checkTouch()
         // Recupera coordinate native (Portrait)
         uint16_t rawX = points[0].x;
         uint16_t rawY = points[0].y;
-
-        // DEBUG: Decommenta se vuoi vedere le coordinate grezze sul monitor seriale
-        // Serial.print("Raw: "); Serial.print(rawX); Serial.print(","); Serial.println(rawY);
 
         // Limita i valori per evitare underflow/overflow nella mappatura
         if (rawX > 480)

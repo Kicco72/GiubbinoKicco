@@ -1,3 +1,6 @@
+// Kicco972.net
+
+
 #include "Stato.h"
 
 Stato::Stato() : _livelloCorrente(PERICOLO), _rgb(NULL), _lastBlinkTime(0), _ledOn(false) {}

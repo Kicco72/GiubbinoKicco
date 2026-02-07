@@ -1,3 +1,6 @@
+// Kicco972.net
+
+
 #include "Memoria.h"
 
 Memoria::Memoria() : _msd(nullptr), _fsUSB(nullptr), _qspi(nullptr), _fsQSPI(nullptr), _mounted(false), _selectedDrive(0) {}
@@ -73,12 +76,23 @@ bool Memoria::logData(String date, String time, float temp, float hum, float pre
     fseek(f, 0, SEEK_END);
     long size = ftell(f);
     if (size == 0) {
-        fprintf(f, "Data,Ora,Temperatura,Umidita,Pressione\n");
+        // Usa punto e virgola come separatore per compatibilità con Excel (formato europeo)
+        fprintf(f, "Data;Ora;Temperatura;Umidita;Pressione\n");
     }
 
+    // Converte i float in stringhe e sostituisce il punto con la virgola
+    // Questo risolve i problemi di interpretazione (es. data) in Excel italiano
+    String sTemp = String(temp, 2);
+    sTemp.replace('.', ',');
+    
+    String sHum = String(hum, 2);
+    sHum.replace('.', ',');
+    
+    String sPress = String(press, 2);
+    sPress.replace('.', ',');
+
     // Scrive la riga di dati
-    // fprintf usa le stringhe C, quindi convertiamo le String Arduino con .c_str()
-    fprintf(f, "%s,%s,%.2f,%.2f,%.2f\n", date.c_str(), time.c_str(), temp, hum, press);
+    fprintf(f, "%s;%s;%s;%s;%s\n", date.c_str(), time.c_str(), sTemp.c_str(), sHum.c_str(), sPress.c_str());
     
     // Chiude il file per salvare le modifiche
     fclose(f);

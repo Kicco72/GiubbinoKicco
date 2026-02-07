@@ -1,7 +1,7 @@
 /*
   Nano33_IoT.ino
   Codice per Arduino Nano 33 IoT
-  Funzione: Periferica BLE che agisce come attuatore (LED) controllato dal Master
+  Funzione: Periferica Giga R1 che agisce come attuatore (LED) controllato dal Master
 */
 
 #include <ArduinoBLE.h>

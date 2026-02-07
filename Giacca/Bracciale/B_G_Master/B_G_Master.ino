@@ -1,11 +1,11 @@
 
 
-// Progetto Bracciale Giubbino
 // Progetto Bracciale
 // di Kicco972, 2025
 // Google Gemini Pro
 
 // --- INCLUSIONE LIBRERIE ---
+
 // Includi i moduli del progetto
 #include "mbed.h" // Mbed OS (Sistema operativo real-time sottostante)
 #include "Display.h" // Gestione interfaccia grafica e touch
@@ -19,6 +19,7 @@
 #include <Arduino_GigaDisplay_GFX.h>
 
 // --- OGGETTI GLOBALI ---
+
 // Oggetto Display Globale (condiviso tra Display.cpp e Imu3DVisualizer.cpp)
 GigaDisplay_GFX gigaDisplay;
 GigaDisplayRGB rgb; // Oggetto per controllare il LED RGB integrato nel display shield
@@ -33,6 +34,7 @@ Stato gestioneStato; // Oggetto per gestire il LED di stato
 Memoria memoria; // Oggetto per gestire l'archivio dati
 
 // --- VARIABILI DI STATO ---
+
 // Variabile di stato per la modalità di visualizzazione
 bool imuMode = false; // true = visualizza sfera 3D, false = schermata base
 bool bussolaMode = false; // Flag per modalità bussola (true = visualizza bussola)
@@ -47,7 +49,6 @@ void setup()
 {
   // Inizializzazione comunicazione seriale per debug
   Serial.begin(115200);
-  // while (!Serial); // Decommentare se si riscontrano problemi con l'output seriale all'avvio
 
   Serial.println("--- Avvio Bracciale Giga ---");
 
@@ -72,13 +73,11 @@ void setup()
   // Ripristina la schermata base (pulsanti e titolo) perché l'init IMU ha pulito lo schermo
   display.showBaseScreen();
 
-  // Opzionale: Stampa il contenuto attuale della memoria all'avvio
-  // memoria.printContent(); 
-
   Serial.println("Setup completato. Premi 'Scan' per cercare i dispositivi.");
 }
 
 // --- LOOP PRINCIPALE ---
+
 void loop()
 {
   // 1. Controlla l'input dell'utente (touchscreen)
@@ -138,8 +137,6 @@ void loop()
         Serial.println("Apro schermata IMU");
         imuMode = true;
         display.prepareSubScreen();
-        // Opzionale: Personalizza pulsanti specifici per IMU qui
-        // display.setButtonLabel(Display::BUTTON_IMU, "Tare"); 
         imuViz.drawBackground();
     }
     break;
@@ -196,9 +193,7 @@ void loop()
     // Funzione Base: Apri MEMORIA
     // Funzione Sub: Disponibile
     
-    if (imuMode || bussolaMode || memoryMode) {
-        // Pulsante disponibile
-    } else {
+    if (!imuMode && !bussolaMode && !memoryMode) {
         // Entra in modalità Memoria
         Serial.println("Apro schermata Memoria");
         memoryMode = true;
@@ -276,24 +271,27 @@ void loop()
     }
   }
 
-  // 6. Aggiungiamo una logica per fermare la scansione una volta connessi a tutto
-  if (myNetwork.isScanning() && myNetwork.isSenseConnected() && myNetwork.isIoTConnected())
-  {
-    Serial.println("Trovati e connessi a entrambi i dispositivi. Interrompo scansione.");
-    myNetwork.stopScan();
-  }
-
   // 7. Gestione Archiviazione Dati (Ogni ora)
   // 3600000 ms = 1 ora
   if (millis() - lastLogTime > 3600000)
   {
+      Serial.println("--- Tentativo Archiviazione Automatica (Oraria) ---");
+
       // Salva solo se abbiamo dati validi dal sensore Sense
       if (myNetwork.isSenseConnected()) {
-          memoria.logData(myWifi.getDateString(), 
+          bool esito = memoria.logData(myWifi.getDateString(), 
                           myWifi.getTimeString(), 
                           myNetwork.getLatestTemperature(), 
                           myNetwork.getLatestHumidity(), 
                           myNetwork.getLatestPressure());
+          
+          if (esito) {
+              Serial.println("Dati salvati correttamente su USB.");
+          } else {
+              Serial.println("Errore salvataggio: Chiavetta USB non trovata o errore scrittura.");
+          }
+      } else {
+          Serial.println("Archiviazione saltata: Sensore Sense non connesso (Dati non validi).");
       }
       lastLogTime = millis();
   }
@@ -330,6 +328,4 @@ void loop()
   // Aggiorna l'icona sul display (LED Virtuale in alto a destra)
   display.updateStateIcon(coloreStato);
 
-  // Rimosso delay(20) per rendere l'animazione 3D più fluida
-  // Il touch ha già il suo debounce interno o gestito in checkTouch
 }

@@ -1,3 +1,6 @@
+// Kicco972.net
+
+
 #include "Comunicazione.h"
 
 // Definizione della funzione Com()
